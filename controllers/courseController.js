@@ -132,16 +132,17 @@ const getCoursesByUser = async (req, res) => {
 const getCoursesByDiscenteId = async (req, res) => {
   try {
     const discenteId = req.params.id;
-    console.log('discenteId: ', discenteId);
 
     if (!mongoose.Types.ObjectId.isValid(discenteId)) {
       return res.status(400).json({ message: 'Invalid discenteId format' });
     }
 
-    const courses = await Course.find({
-      userId: req.user.id,
-      discente: discenteId,
-    })
+    // Check if the user is an admin
+    const query = req.user.role === 'admin' 
+      ? { discente: discenteId } // Admin can see all courses for the discente
+      : { userId: req.user.id, discente: discenteId }; // Regular users see only their courses
+
+    const courses = await Course.find(query)
       .populate('tipologia')
       .populate('discente');
 
@@ -150,6 +151,26 @@ const getCoursesByDiscenteId = async (req, res) => {
     res.status(500).json({ message: 'Errore durante il recupero dei corsi' });
   }
 };
+
+// const getCoursesByDiscenteId = async (req, res) => {
+//   try {
+//     const discenteId = req.params.id;
+//     if (!mongoose.Types.ObjectId.isValid(discenteId)) {
+//       return res.status(400).json({ message: 'Invalid discenteId format' });
+//     }
+
+//     const courses = await Course.find({
+//       userId: req.user.id,
+//       discente: discenteId,
+//     })
+//       .populate('tipologia')
+//       .populate('discente');
+
+//     res.status(200).json(courses);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Errore durante il recupero dei corsi' });
+//   }
+// };
 
 const getCourseById = async (req, res) => {
   const { id } = req.params;
@@ -524,9 +545,12 @@ const updateCourse = async (req, res) => {
 
     // Fetch the user's orders for the kit used in this course
     const userOrders = await Order.find({
-      userId: course.userId,
-      'orderItems.productId': course.tipologia,
-    });
+      userId: req.user.id,
+      'orderItems.productId': course?.tipologia,
+    }).populate('userId');
+
+    console.log('userOrders: ', userOrders);
+    console.log('userOrders[0]?.userId?.name : ', userOrders[0]?.userId?.name);
 
     if (!userOrders.length) {
       return res.status(400).json({ message: 'No kits found for the user' });
@@ -590,7 +614,7 @@ const updateCourse = async (req, res) => {
     const updatedCourse = await course.save();
     await createNotification({
       message: `${
-        req.user.role == 'center'
+        req?.user?.role == 'center'
           ? userOrders[0]?.userId?.name
           : userOrders[0]?.userId?.firstName +
             ' ' +
@@ -620,9 +644,9 @@ const addCourseQuantity = async (req, res) => {
 
     // Fetch the user's orders for the kit used in this course
     const userOrders = await Order.find({
-      userId: course.userId,
-      'orderItems.productId': course.tipologia,
-    });
+      userId: req.user.id,
+      'orderItems.productId': course?.tipologia,
+    }).populate('userId');
 
     if (!userOrders.length) {
       return res.status(400).json({ message: 'No kits found for the user' });
@@ -683,7 +707,13 @@ const addCourseQuantity = async (req, res) => {
 
     // Send notification (optional)
     await createNotification({
-      message: `${req.user.firstName} ${req.user.lastName} has added quantity to the course.`,
+      message: `${
+        req.user.role == 'center'
+          ? userOrders[0]?.userId?.name
+          : userOrders[0]?.userId?.firstName +
+            ' ' +
+            userOrders[0]?.userId?.lastName
+      } has added quantity to the course.`,
       senderId: req.user.id,
       category: 'general',
       isAdmin: true,

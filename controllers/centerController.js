@@ -68,7 +68,7 @@ exports.registerCenter = async (req, res) => {
     );
 
     await createNotification({
-      message: `New Center Registered`,
+      message: `${name} Center Registered`,
       senderId: null,
       category:'centerAccount',
       userName:newCenter.name,

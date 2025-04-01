@@ -93,7 +93,7 @@ exports.registerInstructor = async (req, res) => {
     );
 
     await createNotification({
-      message: `New Instructor Registered`,
+      message: `${firstName+' '+lastName} Instructor Registered`,
       senderId: null,
       category: 'instructorAccount',
       userName: newInstructor?.firstName + ' ' + newInstructor?.lastName,
