@@ -129,6 +129,33 @@ const getCoursesByUser = async (req, res) => {
   }
 };
 
+
+const getAllDiscenteExpirationCourses = async (req, res) => {
+  try {
+    // Only admins can access this endpoint (additional security check)
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized: Admin access only' });
+    }
+
+    // Get all courses with populated fields including user data
+    const courses = await Course.find()
+      .populate('tipologia')
+      .populate('discente')
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName email name role' // Include relevant user fields
+      })
+      .populate('direttoreCorso')
+      .populate('istruttore');
+
+    res.status(200).json(courses);
+  } catch (error) {
+    console.error('Error retrieving discente expiration courses:', error);
+    res.status(500).json({ message: 'Error retrieving discente expiration courses' });
+  }
+};
+
+
 const getCoursesByDiscenteId = async (req, res) => {
   try {
     const discenteId = req.params.id;
@@ -932,4 +959,5 @@ module.exports = {
   courseType,
   deleteCourseTypes,
   getCourseTypes,
+  getAllDiscenteExpirationCourses,
 };
