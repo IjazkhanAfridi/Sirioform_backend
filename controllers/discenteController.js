@@ -189,6 +189,76 @@ const updateDiscentePatentNumber = async (req, res) => {
   }
 };
 
+const searchDiscente = async (req, res) => {
+  const { searchTerm } = req.query;
+  
+  try {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return res.status(400).json({ message: 'Search term is required' });
+    }
+
+    // Search by codiceFiscale or patentNumber
+    const discenti = await Discente.find({
+      $or: [
+        { codiceFiscale: { $regex: new RegExp(searchTerm, 'i') } },
+        { patentNumber: { $in: [searchTerm] } }
+      ]
+    }).populate('userId');
+    
+    res.status(200).json(discenti);
+  } catch (error) {
+    console.error('Error searching discenti:', error);
+    res.status(500).json({ message: 'Error searching discenti' });
+  }
+};
+
+const associateDiscenteWithUser = async (req, res) => {
+  const { discenteId } = req.body;
+  
+  try {
+    // Find discente
+    const discente = await Discente.findById(discenteId);
+    
+    if (!discente) {
+      return res.status(404).json({ message: 'Discente not found' });
+    }
+    
+    // Check if discente is already associated with this user
+    if (discente.userId && discente.userId.toString() === req.user.id) {
+      return res.status(400).json({ message: 'Discente already associated with you' });
+    }
+    
+    // Create a new discente associated with current user
+    const newDiscente = new Discente({
+      nome: discente.nome,
+      cognome: discente.cognome,
+      codiceFiscale: discente.codiceFiscale,
+      indirizzo: discente.indirizzo,
+      città: discente.città,
+      regione: discente.regione,
+      email: discente.email,
+      telefono: discente.telefono,
+      patentNumber: discente.patentNumber,
+      dateOfBirth: discente.dateOfBirth,
+      placeOfBirth: discente.placeOfBirth,
+      province: discente.province,
+      residenceIn: discente.residenceIn,
+      street: discente.street,
+      number: discente.number,
+      zipCode: discente.zipCode,
+      gender: discente.gender,
+      userId: req.user.id
+    });
+    
+    await newDiscente.save();
+    
+    res.status(200).json({ message: 'Discente added to your list', discente: newDiscente });
+  } catch (error) {
+    console.error('Error associating discente:', error);
+    res.status(500).json({ message: 'Error associating discente' });
+  }
+};
+
 module.exports = {
   createDiscente,
   getAllDiscenti,
@@ -196,4 +266,6 @@ module.exports = {
   updateDiscente,
   getUserDiscentiById,
   updateDiscentePatentNumber,
+  searchDiscente,
+  associateDiscenteWithUser
 }; // Esporta entrambe le funzioni
