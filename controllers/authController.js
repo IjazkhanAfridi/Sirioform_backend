@@ -19,7 +19,7 @@ exports.login = async (req, res) => {
     // }
 
     if (!user) {
-      return res.status(400).json({ error: 'User not found' });
+      return res.status(400).json({ error: 'Utente non trovato' });
     }
 
     // Check if the user is active
@@ -27,13 +27,13 @@ exports.login = async (req, res) => {
       return res
         .status(403)
         .json({
-          error: 'Account not activated. Please contact the administrator.',
+          error: `Account non ancora attivato. Si prega di contattare l'amministratore!.`,
         });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      return res.status(400).json({ error: 'Credenziali errate' });
     }
 
     const payload = {
@@ -61,7 +61,7 @@ exports.getLoggedInInstructor = async (req, res) => {
   try {
     const instructor = await User.findById(req.user.id).select('-password');
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
     res.json(instructor);
   } catch (err) {
@@ -75,7 +75,7 @@ exports.getLoggedInCenter = async (req, res) => {
       .populate('sanitarios instructors')
       .select('-password');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
     res.json(center);
   } catch (err) {

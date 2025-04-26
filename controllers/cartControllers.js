@@ -7,7 +7,6 @@ exports.getCartItems = async (req, res) => {
   console.log('req: ', req.user);
   try {
     const cart = await Cart.findOne({ userId: req.user.id }).populate('items.item');
-    console.log('cart: ', cart);
     res.json(cart || { items: [] });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
@@ -18,11 +17,10 @@ exports.getCartItems = async (req, res) => {
 
 exports.postCartItems = async (req, res) => {
   const { itemId, quantity } = req.body;
-  console.log('req user id: ', req.user.id);
 
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'Utente non autenticato' });
     }
 
     // Fetch the cart based on the current user's userId
@@ -37,7 +35,7 @@ exports.postCartItems = async (req, res) => {
     } else {
       const itemExists = await Item.findById(itemId);
       if (!itemExists) {
-        return res.status(404).json({ message: 'Item not found' });
+        return res.status(404).json({ message: 'Oggetto non trovato' });
       }
       cart.items.push({ item: itemId, quantity: quantity || 6 });
     }
@@ -56,11 +54,11 @@ exports.deleteCartItmes = async (req, res) => {
 
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'Utente non autenticato' });
     }
     const cart = await Cart.findOne({ userId: req.user.id });
     if (!cart) {
-      return res.status(404).json({ message: 'Cart not found' });
+      return res.status(404).json({ message: 'Carrello non trovato' });
     }
     const itemObjectId = new mongoose.Types.ObjectId(itemId);
     cart.items = cart.items.filter(
@@ -69,7 +67,6 @@ exports.deleteCartItmes = async (req, res) => {
     await cart.save();
     res.status(200).json(cart);
   } catch (error) {
-    console.error('Error deleting cart item:', error);
     res.status(500).json({ message: 'Server error', error });
   }
 };

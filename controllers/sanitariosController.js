@@ -39,7 +39,7 @@ exports.updateSanitario = async (req, res) => {
     const updatedSanitario = await Sanitario.findByIdAndUpdate(id, updates, { new: true });
 
     if (!updatedSanitario) {
-      return res.status(404).json({ error: 'Sanitario not found' });
+      return res.status(404).json({ error: 'Sanitario non trovato' });
     }
 
     res.json(updatedSanitario);
@@ -55,10 +55,10 @@ exports.deleteSanitario = async (req, res) => {
     const deletedSanitario = await Sanitario.findByIdAndDelete(id);
 
     if (!deletedSanitario) {
-      return res.status(404).json({ error: 'Sanitario not found' });
+      return res.status(404).json({ error: 'Sanitario non trovato' });
     }
 
-    res.json({ message: 'Sanitario deleted successfully' });
+    res.json({ message: 'Sanitario eliminato con successo' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

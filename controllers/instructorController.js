@@ -5,7 +5,6 @@ const User = require('../models/User');
 const { createNotification } = require('../utils/notificationService');
 
 exports.registerInstructor = async (req, res) => {
-  console.log('req.file: ', req.file);
   const resumeUrl = req.files && req.files.resumeUrl && req.files.resumeUrl[0] ? `/uploads/${req.files.resumeUrl[0].filename}` : '';
   const {
     firstName,
@@ -25,17 +24,15 @@ exports.registerInstructor = async (req, res) => {
     recaptchaToken,
   } = req.body;
 
-  console.log('resumeUrl: ', resumeUrl);
-
   if (password !== repeatPassword) {
-    return res.status(400).json({ error: 'Passwords do not match' });
+    return res.status(400).json({ error: 'la password non corrisponde' });
   }
   const today = new Date();
   for (const qualification of qualifications) {
     const expirationDate = new Date(qualification.expirationDate);
     if (expirationDate < today) {
       return res.status(400).json({
-        error: `Qualification '${qualification.name}' has an expiration date earlier than today.`,
+        error: `La data di scadenza della qualifica '${qualification.name}' deve essere antecedente alla data di iscrizione.`,
       });
     }
   }
@@ -46,13 +43,13 @@ exports.registerInstructor = async (req, res) => {
   );
 
   if (!response.data.success) {
-    return res.status(400).json({ error: 'reCAPTCHA validation failed' });
+    return res.status(400).json({ error: 'validazione reCAPTCHA fallita' });
   }
 
   try {
     const existingInstructor = await User.findOne({ username });
     if (existingInstructor) {
-      return res.status(400).json({ error: 'Username already exists' });
+      return res.status(400).json({ error: `Username già esiste. si prega di sceglierne un'altro` });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -93,7 +90,7 @@ exports.registerInstructor = async (req, res) => {
     );
 
     await createNotification({
-      message: `${firstName+' '+lastName} Instructor Registered`,
+      message: `l'istruttore ${firstName+' '+lastName} si è registrato. in attesa di approvazione`,
       senderId: null,
       category: 'instructorAccount',
       userName: newInstructor?.firstName + ' ' + newInstructor?.lastName,
@@ -134,7 +131,7 @@ exports.updateInstructor = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Utente non trovato' });
     }
 
     res.status(200).json(user);
@@ -188,7 +185,7 @@ exports.getInstructorById = async (req, res) => {
       'sanitarios'
     );
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
     res.json(instructor);
   } catch (err) {
@@ -202,13 +199,13 @@ exports.assignSanitario = async (req, res) => {
   try {
     const instructor = await User.findById(instructorId);
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
 
     if (instructor.sanitarios.includes(sanitarioId)) {
       return res
         .status(400)
-        .json({ error: 'Sanitario already assigned to this instructor' });
+        .json({ error: `Sanitario già assegnato all'istruttore` });
     }
 
     instructor.sanitarios.push(sanitarioId);
@@ -226,7 +223,7 @@ exports.getAssignedSanitarios = async (req, res) => {
       'sanitarios'
     );
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
     res.status(200).json(instructor.sanitarios);
   } catch (err) {
@@ -240,7 +237,7 @@ exports.removeSanitario = async (req, res) => {
   try {
     const instructor = await User.findById(instructorId);
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
 
     instructor.sanitarios.pull(sanitarioId);
@@ -256,7 +253,7 @@ exports.getInstructorSanitarios = async (req, res) => {
     const instructorId = req.params.id;
     const instructor = await User.findById(instructorId).populate('sanitarios');
     if (!instructor) {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
     res.json(instructor.sanitarios);
   } catch (err) {
@@ -270,13 +267,13 @@ exports.deleteInstructor = async (req, res) => {
   try {
     const instructor = await User.findById(id);
     if (!instructor || instructor.role !== 'instructor') {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     await User.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Center deleted successfully' });
+    res.status(200).json({ message: 'Centro eliminato con successo' });
 
     // Optionally, you can add additional logic like sending a notification or email.
     // sendEmail(center.email, 'Account Deleted', 'Your account has been deleted.');
@@ -294,21 +291,18 @@ exports.deleteInstructor = async (req, res) => {
 
 exports.changeInstructorStatus = async (req, res) => {
   const { id } = req.params;
-  console.log('id: ', id);
   const { isActive } = req.body;
-  console.log('isActive: ', isActive);
 
   try {
     const instructor = await User.findById(id);
-    console.log('instructor: ', instructor);
     if (!instructor || instructor.role !== 'instructor') {
-      return res.status(404).json({ error: 'Instructor not found' });
+      return res.status(404).json({ error: 'Istruttore non trovato' });
     }
 
     instructor.isActive = isActive;
     await instructor.save();
 
-    res.status(200).json({ message: 'Instructor status updated successfully', instructor });
+    res.status(200).json({ message: 'Istruttore aggiornato con successo', instructor });
   } catch (err) {
     console.log('errsd: ', err);
     res.status(500).json({ error: err.message });

@@ -22,7 +22,6 @@ const createDiscente = async (req, res) => {
     zipCode,
     gender,
   } = req.body;
-  console.log('user id', req?.user);
   try {
     const newDiscente = new Discente({
       nome,
@@ -47,7 +46,6 @@ const createDiscente = async (req, res) => {
     await newDiscente.save();
     res.status(201).json(newDiscente);
   } catch (error) {
-    console.log('error 500', error);
     res
       .status(500)
       .json({ message: 'Errore durante la creazione del discente' });
@@ -151,14 +149,12 @@ const updateDiscentePatentNumber = async (req, res) => {
     if (!discente) {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
-    console.log('discente: ', discente);
 
     const hasMatchingPatentNumber = order.orderItems.some((orderItem) => {
       return orderItem.progressiveNumbers.some((number) =>
         discente.patentNumber.includes(number)
       );
     });
-    console.log('hasMatchingPatentNumber: ', hasMatchingPatentNumber);
 
     if (hasMatchingPatentNumber) {
       return res.status(400).json({
@@ -179,10 +175,6 @@ const updateDiscentePatentNumber = async (req, res) => {
 
     res.status(200).json(updatedDiscente);
   } catch (error) {
-    console.error(
-      "Errore durante l'aggiornamento del numero di patente:",
-      error
-    );
     res.status(500).json({
       message: "Errore durante l'aggiornamento del numero di patente",
     });
@@ -194,7 +186,7 @@ const searchDiscente = async (req, res) => {
   
   try {
     if (!searchTerm || searchTerm.trim() === '') {
-      return res.status(400).json({ message: 'Search term is required' });
+      return res.status(400).json({ message: 'il termine di ricerca è obbligatorio' });
     }
 
     // Search by codiceFiscale or patentNumber
@@ -207,8 +199,7 @@ const searchDiscente = async (req, res) => {
     
     res.status(200).json(discenti);
   } catch (error) {
-    console.error('Error searching discenti:', error);
-    res.status(500).json({ message: 'Error searching discenti' });
+    res.status(500).json({ message: 'Errore nella ricerca dei discenti' });
   }
 };
 
@@ -220,12 +211,12 @@ const associateDiscenteWithUser = async (req, res) => {
     const discente = await Discente.findById(discenteId);
     
     if (!discente) {
-      return res.status(404).json({ message: 'Discente not found' });
+      return res.status(404).json({ message: 'Discente non trovato' });
     }
     
     // Check if discente is already associated with this user
     if (discente.userId && discente.userId.toString() === req.user.id) {
-      return res.status(400).json({ message: 'Discente already associated with you' });
+      return res.status(400).json({ message: 'Discente già associato' });
     }
     
     // Create a new discente associated with current user
@@ -252,10 +243,9 @@ const associateDiscenteWithUser = async (req, res) => {
     
     await newDiscente.save();
     
-    res.status(200).json({ message: 'Discente added to your list', discente: newDiscente });
+    res.status(200).json({ message: 'Discente aggiunto alla tua lista', discente: newDiscente });
   } catch (error) {
-    console.error('Error associating discente:', error);
-    res.status(500).json({ message: 'Error associating discente' });
+    res.status(500).json({ message: 'Errore di associazione del discente' });
   }
 };
 
@@ -268,4 +258,4 @@ module.exports = {
   updateDiscentePatentNumber,
   searchDiscente,
   associateDiscenteWithUser
-}; // Esporta entrambe le funzioni
+};

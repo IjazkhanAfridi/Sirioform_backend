@@ -9,9 +9,9 @@ const createDocument = async (req, res) => {
 
     res
       .status(201)
-      .json({ message: 'Document created successfully', document });
+      .json({ message: 'Documento creato con successo', document });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating document', error });
+    res.status(500).json({ message: 'Errore nella creazione del documento', error });
   }
 };
 
@@ -20,7 +20,7 @@ const getDocuments = async (req, res) => {
     const documents = await Document.find();
     res.status(200).json(documents);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching documents', error });
+    res.status(500).json({ message: 'Errore nel recupero del documento', error });
   }
 };
 
@@ -36,12 +36,12 @@ const updateDocument = async (req, res) => {
     const document = await Document.findByIdAndUpdate(id, updateData, { new: true });
 
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ message: 'Documento non trovato' });
     }
 
-    res.status(200).json({ message: 'Document updated successfully', document });
+    res.status(200).json({ message: 'Documento aggiornato con successo', document });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating document', error });
+    res.status(500).json({ message: 'Errore di aggiornamento del documento', error });
   }
 };
 
@@ -51,12 +51,12 @@ const deleteDocument = async (req, res) => {
     const document = await Document.findByIdAndDelete(id);
 
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ message: 'Documento non trovato' });
     }
 
-    res.status(200).json({ message: 'Document deleted successfully' });
+    res.status(200).json({ message: 'Documento eliminato con successo' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting document', error });
+    res.status(500).json({ message: `Errore nell'eliminazione del documento`, error });
   }
 };
 

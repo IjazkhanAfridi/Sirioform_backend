@@ -10,8 +10,6 @@ const extractProgressiveNumber = (progressiveNumber) => {
 
 const createOrderController = async (req, res) => {
   const { productIds, quantities,fromCart } = req.body;
-  console.log('fromCart: ', fromCart);
-
   try {
     if (!req.user || !req.user.id) {
       return res.status(400).json({ message: 'User information is missing.' });
@@ -93,7 +91,6 @@ const createOrderController = async (req, res) => {
           (cartItem) => !productIds?.includes(cartItem?.item?.toString())
         );
         await userCart.save();
-        console.log('Cart updated: Items removed after order creation.');
       }
     }
 
@@ -110,8 +107,6 @@ const createOrderController = async (req, res) => {
 const createOrder = async (req, res) => {
   const { userId, orderItems } = req.body;
 
-  console.log('Order data received:', { userId, orderItems }); // Log dei dati ricevuti
-
   const order = new Order({
     user: userId,
     orderItems,
@@ -120,57 +115,42 @@ const createOrder = async (req, res) => {
 
   try {
     const createdOrder = await order.save();
-    console.log('Order created and saved:', createdOrder); // Log per confermare la creazione
     res.status(201).json(createdOrder);
   } catch (err) {
-    console.error('Error during order creation:', err); // Log per errori
     res.status(500).json({ error: 'Order creation failed' });
   }
 };
 
 // Funzione per visualizzare tutti gli ordini (solo per admin)
 const getAllOrders = async (req, res) => {
-  console.log('--- Entering getAllOrders ---');
-  console.log('req.user:', req.user);
 
   try {
     if (req.user?.role == 'admin') {
-      console.log('User is admin, fetching all orders...');
       const orders = await Order.find()
         .populate(
           'userId orderItems.productId',
           'firstName lastName role name type code isRefreshCourse isForInstructor isForTrainer'
         )
         .populate('orderItems');
-      console.log('Orders fetched with populate:', orders);
       res.json(orders);
     } else {
-      console.log(
-        'User is not admin, fetching orders for userId:',
-        req.user._id
-      );
       const orders = await Order.find({ userId: req.user._id });
-      console.log('User-specific orders fetched:', orders);
       res.json(orders);
     }
   } catch (error) {
-    console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Server error' });
   }
   console.log('--- Exiting getAllOrders ---');
 };
 
 const getUserOrders = async (req, res) => {
-  console.log('GET /api/orders - Fetching user orders'); // Log
   try {
     const orders = await Order.find({ userId: req.user.id }).populate(
       'orderItems.productId',
       'type'
     );
-    console.log('User orders fetched:', orders);
     res.json(orders);
   } catch (err) {
-    console.error('Fetching orders error:', err);
     res
       .status(500)
       .json({ message: 'Server error, could not retrieve orders' });
@@ -233,7 +213,6 @@ const getProdottiAcquistati = async (req, res) => {
 
     res.status(200).json(prodottiAcquistati);
   } catch (err) {
-    console.log('err: ', err);
     res
       .status(500)
       .json({ message: 'Errore durante il recupero dei prodotti acquistati' });

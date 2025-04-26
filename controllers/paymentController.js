@@ -17,11 +17,9 @@ const createPaymentSession = async (req, res) => {
 
   try {
     const productIdArray = Array.isArray(productIds) ? productIds : [productIds];
-    console.log('productIdArray: ', productIdArray);
     const quantityArray = Array.isArray(quantities) ? quantities : [quantities];
 
     const products = await Kit.find({ _id: { $in: productIdArray } });
-    console.log('products: ', products);
 
     if (products?.length === 0) {
       return res.status(404).json({ message: 'No products found for the provided IDs' });
@@ -34,7 +32,6 @@ const createPaymentSession = async (req, res) => {
       return total + price * quantity;
     }, 0);
 
-    console.log('Calculated Amount:', amount * 100);
     // const products = await Kit.find({ _id: { $in: productIds } });
 
     // const amount = products.reduce((total, product, index) => {
@@ -53,7 +50,6 @@ const createPaymentSession = async (req, res) => {
 
     res.json({ clientSecret: paymentIntent.client_secret });
   } catch (error) {
-    console.error('Error creating PaymentIntent:', error);
     res.status(500).send('An error occurred, unable to create payment session');
   }
 };

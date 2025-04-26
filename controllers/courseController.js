@@ -34,7 +34,9 @@ const createCourse = async (req, res) => {
     }).populate('userId');
     console.log('userOrders: ', userOrders);
     if (!userOrders.length) {
-      return res.status(400).json({ message: 'No kits found for the user' });
+      return res
+        .status(400)
+        .json({ message: `Nessun kit trovato per l'utente` });
     }
     let totalAvailableQuantity = 0;
     let selectedOrderItem = null;
@@ -52,7 +54,9 @@ const createCourse = async (req, res) => {
     if (numeroDiscenti > totalAvailableQuantity) {
       return res
         .status(400)
-        .json({ message: 'Not enough kits available to create the course' });
+        .json({
+          message: 'Non si dispone di abbastanza kit per creare il corso!',
+        });
     }
 
     // Create the course
@@ -80,9 +84,9 @@ const createCourse = async (req, res) => {
           : userOrders[0]?.userId?.firstName +
             ' ' +
             userOrders[0]?.userId?.lastName
-      } has created a new ${
+      } ha creato un nuovo ${
         isRefreshCourse == true ? ' Refresh ' : ''
-      } course.`,
+      } corso di aggiornamento.`,
       senderId: req.user.id,
       category: 'general',
       isAdmin: true,
@@ -110,7 +114,6 @@ const createCourse = async (req, res) => {
 
     res.status(201).json(createdCourse);
   } catch (error) {
-    console.error('Errore durante la creazione del corso:', error);
     res.status(500).json({ message: 'Errore durante la creazione del corso' });
   }
 };
@@ -129,12 +132,15 @@ const getCoursesByUser = async (req, res) => {
   }
 };
 
-
 const getAllDiscenteExpirationCourses = async (req, res) => {
   try {
     // Only admins can access this endpoint (additional security check)
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized: Admin access only' });
+      return res
+        .status(403)
+        .json({
+          message: `Non autorizzato. Accesso consentito solo all'Amministratore`,
+        });
     }
 
     // Get all courses with populated fields including user data
@@ -143,31 +149,36 @@ const getAllDiscenteExpirationCourses = async (req, res) => {
       .populate('discente')
       .populate({
         path: 'userId',
-        select: 'firstName lastName email name role' // Include relevant user fields
+        select: 'firstName lastName email name role', // Include relevant user fields
       })
       .populate('direttoreCorso')
       .populate('istruttore');
 
     res.status(200).json(courses);
   } catch (error) {
-    console.error('Error retrieving discente expiration courses:', error);
-    res.status(500).json({ message: 'Error retrieving discente expiration courses' });
+    res
+      .status(500)
+      .json({
+        message: 'Errore durante il recupero dei corsi scaduti del discente',
+      });
   }
 };
-
 
 const getCoursesByDiscenteId = async (req, res) => {
   try {
     const discenteId = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(discenteId)) {
-      return res.status(400).json({ message: 'Invalid discenteId format' });
+      return res
+        .status(400)
+        .json({ message: 'Format invalido per il discente' });
     }
 
     // Check if the user is an admin
-    const query = req.user.role === 'admin' 
-      ? { discente: discenteId } // Admin can see all courses for the discente
-      : { userId: req.user.id, discente: discenteId }; // Regular users see only their courses
+    const query =
+      req.user.role === 'admin'
+        ? { discente: discenteId } // Admin can see all courses for the discente
+        : { userId: req.user.id, discente: discenteId }; // Regular users see only their courses
 
     const courses = await Course.find(query)
       .populate('tipologia')
@@ -221,7 +232,7 @@ const getSingleCourseById = async (req, res) => {
       .populate('tipologia');
 
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
 
     // Find all orders that contain the related kits for this course's tipologia
@@ -233,7 +244,7 @@ const getSingleCourseById = async (req, res) => {
     if (!orders.length) {
       return res
         .status(404)
-        .json({ message: 'Orders not found for this course' });
+        .json({ message: `Ordini non trovati per quest'ordine` });
     }
 
     // Collect all progressive numbers from each matching order item
@@ -269,7 +280,6 @@ const getSingleCourseById = async (req, res) => {
       progressiveNumbers: availableProgressiveNumbers,
     });
   } catch (error) {
-    console.error('Error retrieving course:', error);
     res.status(500).json({ message: 'Error retrieving course' });
   }
 };
@@ -293,13 +303,13 @@ const uploadReportDocument = async (req, res) => {
   const file = req.file;
 
   if (!file) {
-    return res.status(400).json({ message: 'No file uploaded' });
+    return res.status(400).json({ message: 'Nessun file caricato' });
   }
 
   try {
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
 
     course.reportDocument = file.path;
@@ -307,10 +317,10 @@ const uploadReportDocument = async (req, res) => {
 
     res
       .status(200)
-      .json({ message: 'Report document uploaded successfully', course });
+      .json({ message: 'Documento Report caricato con successo', course });
   } catch (error) {
-    console.error('Error uploading report document:', error);
-    res.status(500).json({ message: 'Error uploading report document' });
+    console.error('Errore di caricamento del documento', error);
+    res.status(500).json({ message: 'Errore di caricamento del documento' });
   }
 };
 
@@ -337,14 +347,15 @@ const updateCourseStatus = async (req, res) => {
       'tipologia discente userId'
     );
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
     console.log('course: ', course);
 
     if (status === 'end') {
       if (!course.reportDocument) {
         return res.status(400).json({
-          message: 'Report document is required before ending the course',
+          message:
+            'é necessario caricare il documento del Verbale prima di concludere il corso',
         });
       }
       // Find all orders that have the course's tipologia in their order items
@@ -368,8 +379,6 @@ const updateCourseStatus = async (req, res) => {
         )
         .flatMap((item) => item.progressiveNumbers);
 
-      console.log('allProgressiveNumbers: ', allProgressiveNumbers);
-
       // Check if every student has at least one patent number in the aggregated list
       const allDiscentesHaveMatch = course.discente.every((discente) =>
         discente.patentNumber.some((patentNum) =>
@@ -379,7 +388,7 @@ const updateCourseStatus = async (req, res) => {
 
       if (!allDiscentesHaveMatch) {
         return res.status(400).json({
-          message: `Each student must have a patent number with type ${course.tipologia.type} before ending the course.`,
+          message: `Bisogna associare un kit tipo ${course.tipologia.type} ad ogni studente prima di terminare il corso.`,
         });
       }
     }
@@ -407,8 +416,8 @@ const updateCourseStatus = async (req, res) => {
         ? {
             message: `${
               status === 'update' || status === 'finalUpdate'
-                ? `Admin wants to update ${course?.tipologia?.type} course.`
-                : `The status of your course ${course?.tipologia?.type} has changed.`
+                ? `L'amministratore richiede delle modifiche al corso ${course?.tipologia?.type} .`
+                : `Lo stato del tuo corso ${course?.tipologia?.type} è cambiato.`
             }`,
             senderId: req.user.id,
             category: 'general',
@@ -421,7 +430,7 @@ const updateCourseStatus = async (req, res) => {
                 req.user.role === 'center'
                   ? course?.userId?.name
                   : course?.userId?.firstName + ' ' + course?.userId?.lastName
-              } wants to end the ${course?.tipologia?.type} course.`
+              } vuole concludere il corso ${course?.tipologia?.type} .`
             }`,
             senderId: req.user.id,
             category: 'general',
@@ -431,8 +440,9 @@ const updateCourseStatus = async (req, res) => {
 
     res.status(200).json(course);
   } catch (error) {
-    console.error('Error updating course status:', error);
-    res.status(500).json({ message: 'Error updating course status' });
+    res
+      .status(500)
+      .json({ message: `errore nell'aggiornamento dello stato del corso` });
   }
 };
 
@@ -442,34 +452,35 @@ const assignDescente = async (req, res) => {
     if (!courseId || !discenteId) {
       return res
         .status(400)
-        .json({ error: 'Course ID and Discente ID are required' });
+        .json({ error: `Sono richiesti l'ID del corso e del discente` });
     }
     if (
       !mongoose.Types.ObjectId.isValid(courseId) ||
       !mongoose.Types.ObjectId.isValid(discenteId)
     ) {
-      return res.status(400).json({ error: 'Invalid courseId or discenteId' });
+      return res.status(400).json({ error: `Id corso e discente errati ` });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      return res.status(404).json({ error: 'corso non trovato' });
     }
     if (course.discente.includes(discenteId)) {
       return res
         .status(400)
-        .json({ error: 'Discente is already assigned to this course' });
+        .json({ error: 'Il discente è già stato assegnato a questo corso!' });
     }
     if (course.discente.length >= Number(course.numeroDiscenti)) {
       return res.status(400).json({
-        error: `You already assigned ${course.numeroDiscenti} discente`,
+        error: `Hai gia assegnato ${course.numeroDiscenti} discenti`,
       });
     }
     course.discente.push(discenteId);
     await course.save();
-    res.status(200).json({ message: 'Discente successfully assigned', course });
+    res
+      .status(200)
+      .json({ message: 'Discente assegnato con successo!', course });
   } catch (err) {
-    console.error('Server error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -479,7 +490,7 @@ const removeDiscente = async (req, res) => {
   try {
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ error: 'course not found' });
+      return res.status(404).json({ error: 'Corso non trovato' });
     }
 
     course.discente.pull(discenteId);
@@ -497,7 +508,7 @@ const deleteCourse = async (req, res) => {
     // Find the course by ID before deleting
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
 
     const userOrders = await Order.find({
@@ -506,7 +517,9 @@ const deleteCourse = async (req, res) => {
     });
 
     if (!userOrders.length) {
-      return res.status(400).json({ message: 'No orders found for this user' });
+      return res
+        .status(400)
+        .json({ message: 'Ordini non trovati per questo utente' });
     }
 
     // Return remaining kits to the user's order
@@ -537,15 +550,14 @@ const deleteCourse = async (req, res) => {
     if (!deletedCourse) {
       return res
         .status(404)
-        .json({ message: 'Course not found after deletion' });
+        .json({ message: `Corso non trovato dopo l'eliminazione` });
     }
 
     res.status(200).json({
-      message: 'Course successfully deleted and kits returned to the user',
+      message: `corso eliminato con successo. I kit sono di nuovo disponibili`,
     });
   } catch (error) {
-    console.error('Error deleting course:', error);
-    res.status(500).json({ message: 'Error deleting course' });
+    res.status(500).json({ message: `Errore nell'eliminazione del corso` });
   }
 };
 
@@ -567,7 +579,9 @@ const updateCourse = async (req, res) => {
     // Find the course by ID
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res
+        .status(404)
+        .json({ message: `Errore nell'eliminazione del corso` });
     }
 
     // Fetch the user's orders for the kit used in this course
@@ -580,7 +594,9 @@ const updateCourse = async (req, res) => {
     console.log('userOrders[0]?.userId?.name : ', userOrders[0]?.userId?.name);
 
     if (!userOrders.length) {
-      return res.status(400).json({ message: 'No kits found for the user' });
+      return res
+        .status(400)
+        .json({ message: `Nessun kit trovato per l'utente` });
     }
 
     // Calculate the total available quantity of kits
@@ -604,7 +620,9 @@ const updateCourse = async (req, res) => {
       if (difference > totalAvailableQuantity) {
         return res
           .status(400)
-          .json({ message: 'Not enough kits available to update the course' });
+          .json({
+            message: 'Non si dispone di abbastanza kit di aggiornamento',
+          });
       }
 
       // Update numeroDiscenti
@@ -646,15 +664,14 @@ const updateCourse = async (req, res) => {
           : userOrders[0]?.userId?.firstName +
             ' ' +
             userOrders[0]?.userId?.lastName
-      } has updated the  course.`,
+      } ha aggiornato il corso.`,
       senderId: req.user.id,
       category: 'general',
       isAdmin: true,
     });
     res.status(200).json(updatedCourse);
   } catch (error) {
-    console.error('Error updating course:', error);
-    res.status(500).json({ message: 'Error updating course' });
+    res.status(500).json({ message: 'Errore di aggiornamento per il corso' });
   }
 };
 
@@ -666,7 +683,7 @@ const addCourseQuantity = async (req, res) => {
     // Find the course by ID
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
 
     // Fetch the user's orders for the kit used in this course
@@ -676,7 +693,9 @@ const addCourseQuantity = async (req, res) => {
     }).populate('userId');
 
     if (!userOrders.length) {
-      return res.status(400).json({ message: 'No kits found for the user' });
+      return res
+        .status(400)
+        .json({ message: `Nessun kit trovato per l'utente` });
     }
 
     // Calculate the total available quantity of kits
@@ -688,26 +707,25 @@ const addCourseQuantity = async (req, res) => {
         }
       });
     });
-    console.log('totalAvailableQuantity: ', totalAvailableQuantity);
 
     // Calculate the current kits used in the course
     const currentUsedKits = course.numeroDiscenti;
-    console.log('currentUsedKits: ', currentUsedKits);
 
     // Calculate the difference to check if quantity can be increased
     const difference = numeroDiscenti;
-    console.log('difference: ', difference);
     if (difference <= 0) {
       return res
         .status(400)
-        .json({ message: 'Only additional quantity can be added' });
+        .json({ message: `può essere aggiunta solo una quantità ulteriore` });
     }
 
     // Ensure the additional quantity does not exceed available kits
     if (difference > totalAvailableQuantity) {
       return res
         .status(400)
-        .json({ message: 'Not enough kits available to increase quantity' });
+        .json({
+          message: 'Non si dispone di abbastanza kit per aumentare la quantità',
+        });
     }
 
     // Update numeroDiscenti
@@ -740,7 +758,7 @@ const addCourseQuantity = async (req, res) => {
           : userOrders[0]?.userId?.firstName +
             ' ' +
             userOrders[0]?.userId?.lastName
-      } has added quantity to the course.`,
+      } Ha aggiunto quantità al corso.`,
       senderId: req.user.id,
       category: 'general',
       isAdmin: true,
@@ -748,8 +766,7 @@ const addCourseQuantity = async (req, res) => {
 
     res.status(200).json(updatedCourse);
   } catch (error) {
-    console.error('Error updating course quantity:', error);
-    res.status(500).json({ message: 'Error updating course quantity' });
+    res.status(500).json({ message: `Errore nell'aggiunta della quantità` });
   }
 };
 
@@ -759,7 +776,7 @@ const sendCertificateToDiscente = async (req, res) => {
   try {
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'corso non trovato' });
     }
 
     const certificate = course.certificates.find(
@@ -768,7 +785,7 @@ const sendCertificateToDiscente = async (req, res) => {
     if (!certificate) {
       return res
         .status(404)
-        .json({ message: 'Certificate not found for this discente' });
+        .json({ message: `Certificato non trovato per questo discente` });
     }
 
     const filePath = path.join(__dirname, '..', certificate.certificatePath);
@@ -776,8 +793,7 @@ const sendCertificateToDiscente = async (req, res) => {
     // Send the certificate file to the user
     res.download(filePath, `${discenteId}-certificate.pdf`);
   } catch (error) {
-    console.error('Error sending certificate:', error);
-    res.status(500).json({ message: 'Error sending certificate' });
+    res.status(500).json({ message: 'Errore di invio del certificato' });
   }
 };
 
@@ -826,7 +842,7 @@ const sendCertificate = async (req, res) => {
     // Find the course and populate certificates and discenti
     const course = await Course.findById(courseId).populate('discente');
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ message: 'Corso non trovato' });
     }
 
     // Determine recipients
@@ -840,7 +856,9 @@ const sendCertificate = async (req, res) => {
     }
 
     if (selectedDiscenti.length === 0) {
-      return res.status(400).json({ message: 'No valid recipients found' });
+      return res
+        .status(400)
+        .json({ message: 'nessun destinatario valido trovato' });
     }
 
     // Loop through selected discenti
@@ -867,8 +885,8 @@ const sendCertificate = async (req, res) => {
         // Send email with the attachment and link
         await sendEmail({
           to: discente.email,
-          subject: 'Certificate of completion',
-          text: `${message}\n\nDownload your certificate here: ${certificateLink}`,
+          subject: 'certificato di completamento',
+          text: `${message}\n\nCertificato di completamento del corso: ${certificateLink}`,
           attachments: [
             {
               filename: path.basename(certificatePath),
@@ -883,9 +901,8 @@ const sendCertificate = async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: 'Certificates sent successfully' });
+    res.status(200).json({ message: 'Certificato inviato con successo' });
   } catch (error) {
-    console.error('Error sending certificates:', error);
     res
       .status(500)
       .json({ message: 'Internal server error', error: error.message });
@@ -900,7 +917,7 @@ const courseType = async (req, res) => {
     if (courseTypes === type) {
       return res
         .status(400)
-        .json({ message: 'this course type already exist' });
+        .json({ message: 'Questo tipo di corso già esiste' });
     }
 
     // Create the course
@@ -910,7 +927,6 @@ const courseType = async (req, res) => {
 
     res.status(201).json(createdCourseType);
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({ message: 'Error', error: error });
   }
 };
@@ -918,7 +934,7 @@ const getCourseTypes = async (req, res) => {
   try {
     const courseTypes = await CourseType.find();
     if (courseTypes.length === 0) {
-      return res.status(400).json({ message: 'No Course Found' });
+      return res.status(400).json({ message: 'Corso non trovato' });
     }
     res.status(201).json(courseTypes);
   } catch (error) {
@@ -931,7 +947,7 @@ const deleteCourseTypes = async (req, res) => {
   try {
     const courseTypes = await CourseType.find();
     if (courseTypes.length === 0) {
-      return res.status(400).json({ message: 'No Course Found' });
+      return res.status(400).json({ message: 'Corso non trovato' });
     }
     const deletedCourseType = await CourseType.findByIdAndDelete(id);
     res.status(200).json(deletedCourseType);

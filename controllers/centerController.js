@@ -68,7 +68,7 @@ exports.registerCenter = async (req, res) => {
     );
 
     await createNotification({
-      message: `${name} Center Registered`,
+      message: `il centro ${name} si è registrato. in attesa di approvazione`,
       senderId: null,
       category:'centerAccount',
       userName:newCenter.name,
@@ -87,7 +87,7 @@ exports.updateCenter = async (req, res) => {
   try {
     let center = await User.findById(centerId);
     if (!center || center.role !== 'center') {
-      return res.status(404).json({ error: 'Center not found.' });
+      return res.status(404).json({ error: 'Centro non trovato.' });
     }
     if (req.user.role === 'admin') {
       center.name = name || center.name;
@@ -164,7 +164,7 @@ exports.getCenterById = async (req, res) => {
   try {
     const center = await User.findById(req.params.id).populate('sanitarios');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
     res.json(center);
   } catch (err) {
@@ -178,13 +178,13 @@ exports.assignSanitario = async (req, res) => {
   try {
     const center = await User.findById(centerId);
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     if (center.sanitarios.includes(sanitarioId)) {
       return res
         .status(400)
-        .json({ error: 'Sanitario already assigned to this center' });
+        .json({ error: 'Sanitario già assegnato al centro!' });
     }
 
     center.sanitarios.push(sanitarioId);
@@ -200,7 +200,7 @@ exports.getAssignedSanitarios = async (req, res) => {
   try {
     const center = await User.findById(req.params.id).populate('sanitarios');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
     res.status(200).json(center.sanitarios);
   } catch (err) {
@@ -214,7 +214,7 @@ exports.removeSanitario = async (req, res) => {
   try {
     const center = await User.findById(centerId);
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     center.sanitarios.pull(sanitarioId);
@@ -231,7 +231,7 @@ exports.getCenterSanitarios = async (req, res) => {
     const centerId = req.params.centerId;
     const center = await User.findById(centerId).populate('sanitarios');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     res.json(center.sanitarios);
@@ -247,7 +247,7 @@ exports.assignInstructor = async (req, res) => {
     const { centerId, instructorId } = req.body;
     const center = await User.findById(centerId);
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     if (center.instructors.includes(instructorId)) {
@@ -269,7 +269,7 @@ exports.getAssignedInstructors = async (req, res) => {
   try {
     const center = await User.findById(req.params.id).populate('instructors');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
     res.status(200).json(center.instructors);
   } catch (err) {
@@ -283,7 +283,7 @@ exports.removeInstructor = async (req, res) => {
   try {
     const center = await User.findById(centerId);
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     center.instructors.pull(instructorId);
@@ -299,7 +299,7 @@ exports.getCenterInstructors = async (req, res) => {
     const centerId = req.params.centerId;
     const center = await User.findById(centerId).populate('Instructor');
     if (!center) {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
 
     res.json(center.sanitarios);
@@ -315,13 +315,13 @@ exports.deleteCenter = async (req, res) => {
   try {
     const center = await User.findById(centerId);
     if (!center || center.role !== 'center') {
-      return res.status(404).json({ error: 'Center not found' });
+      return res.status(404).json({ error: 'Centro non trovato' });
     }
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Non autorizzato' });
     }
     await User.findByIdAndDelete(centerId);
-    res.status(200).json({ message: 'Center deleted successfully' });
+    res.status(200).json({ message: 'Centro eliminato con successo!' });
 
     // Optionally, you can add additional logic like sending a notification or email.
     // sendEmail(center.email, 'Account Deleted', 'Your account has been deleted.');
