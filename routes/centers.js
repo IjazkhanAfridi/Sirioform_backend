@@ -17,6 +17,7 @@ const {
   getCenterInstructors,
   updateCenter,
   deleteCenter,
+  toggleCenterStatus,
 } = require('../controllers/centerController');
 const isAdmin = require('../middleware/isAdmin');
 
@@ -31,6 +32,8 @@ router.get('/unapproved', auth, getUnapprovedCenters);
 
 // Route per approvare un centro (richiede autenticazione)
 router.put('/approve/:id', auth, approveCenter);
+
+router.patch('/:centerId/toggle-status', auth, isAdmin, toggleCenterStatus);
 
 // Route per ottenere tutti i centri attivi
 router.get('/', getAllCenters);

@@ -21,6 +21,7 @@ const createDiscente = async (req, res) => {
     number,
     zipCode,
     gender,
+    companyAffiliation,
   } = req.body;
   try {
     const newDiscente = new Discente({
@@ -41,6 +42,7 @@ const createDiscente = async (req, res) => {
       number,
       zipCode,
       gender,
+      companyAffiliation,
       userId: req.user.id,
     });
     await newDiscente.save();
@@ -238,6 +240,7 @@ const associateDiscenteWithUser = async (req, res) => {
       number: discente.number,
       zipCode: discente.zipCode,
       gender: discente.gender,
+      companyAffiliation: discente.companyAffiliation,
       userId: req.user.id
     });
     

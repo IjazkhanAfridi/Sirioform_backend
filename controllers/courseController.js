@@ -18,6 +18,7 @@ const createCourse = async (req, res) => {
     via,
     presso,
     provincia,
+    region,
     zipcode,
     numeroDiscenti,
     istruttori,
@@ -52,11 +53,9 @@ const createCourse = async (req, res) => {
 
     // Check if the available quantity is enough
     if (numeroDiscenti > totalAvailableQuantity) {
-      return res
-        .status(400)
-        .json({
-          message: 'Non si dispone di abbastanza kit per creare il corso!',
-        });
+      return res.status(400).json({
+        message: 'Non si dispone di abbastanza kit per creare il corso!',
+      });
     }
 
     // Create the course
@@ -66,6 +65,7 @@ const createCourse = async (req, res) => {
       via,
       presso,
       provincia,
+      region,
       zipcode,
       numeroDiscenti,
       istruttore: istruttori,
@@ -136,11 +136,9 @@ const getAllDiscenteExpirationCourses = async (req, res) => {
   try {
     // Only admins can access this endpoint (additional security check)
     if (req.user.role !== 'admin') {
-      return res
-        .status(403)
-        .json({
-          message: `Non autorizzato. Accesso consentito solo all'Amministratore`,
-        });
+      return res.status(403).json({
+        message: `Non autorizzato. Accesso consentito solo all'Amministratore`,
+      });
     }
 
     // Get all courses with populated fields including user data
@@ -156,11 +154,9 @@ const getAllDiscenteExpirationCourses = async (req, res) => {
 
     res.status(200).json(courses);
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: 'Errore durante il recupero dei corsi scaduti del discente',
-      });
+    res.status(500).json({
+      message: 'Errore durante il recupero dei corsi scaduti del discente',
+    });
   }
 };
 
@@ -349,7 +345,6 @@ const updateCourseStatus = async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: 'Corso non trovato' });
     }
-    console.log('course: ', course);
 
     if (status === 'end') {
       if (!course.reportDocument) {
@@ -397,7 +392,6 @@ const updateCourseStatus = async (req, res) => {
       const certificates = [];
       for (const discente of course.discente) {
         const filePath = await generateCertificate(discente, course);
-        console.log('filePath: ', filePath);
         certificates.push({
           discenteId: discente._id,
           certificatePath: filePath,
@@ -568,6 +562,7 @@ const updateCourse = async (req, res) => {
     via,
     presso,
     provincia,
+    region,
     zipcode,
     numeroDiscenti,
     istruttori,
@@ -618,11 +613,9 @@ const updateCourse = async (req, res) => {
 
       // Check if increasing the number of discenti exceeds the available kits
       if (difference > totalAvailableQuantity) {
-        return res
-          .status(400)
-          .json({
-            message: 'Non si dispone di abbastanza kit di aggiornamento',
-          });
+        return res.status(400).json({
+          message: 'Non si dispone di abbastanza kit di aggiornamento',
+        });
       }
 
       // Update numeroDiscenti
@@ -650,6 +643,7 @@ const updateCourse = async (req, res) => {
     if (via !== undefined) course.via = via;
     if (presso !== undefined) course.presso = presso;
     if (provincia !== undefined) course.provincia = provincia;
+    if (region !== undefined) course.region = region;
     if (zipcode !== undefined) course.zipcode = zipcode;
     if (istruttori !== undefined) course.istruttore = istruttori;
     if (direttoriCorso !== undefined) course.direttoreCorso = direttoriCorso;
@@ -721,11 +715,9 @@ const addCourseQuantity = async (req, res) => {
 
     // Ensure the additional quantity does not exceed available kits
     if (difference > totalAvailableQuantity) {
-      return res
-        .status(400)
-        .json({
-          message: 'Non si dispone di abbastanza kit per aumentare la quantità',
-        });
+      return res.status(400).json({
+        message: 'Non si dispone di abbastanza kit per aumentare la quantità',
+      });
     }
 
     // Update numeroDiscenti

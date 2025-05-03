@@ -2,6 +2,8 @@ const Cart = require('../models/Cart');
 const Course = require('../models/Course');
 const Kit = require('../models/Kit');
 const Order = require('../models/Order');
+const User = require('../models/User');
+const { createNotification } = require('../utils/notificationService');
 
 const extractProgressiveNumber = (progressiveNumber) => {
   const parts = progressiveNumber.split('-');
@@ -9,7 +11,7 @@ const extractProgressiveNumber = (progressiveNumber) => {
 };
 
 const createOrderController = async (req, res) => {
-  const { productIds, quantities,fromCart } = req.body;
+  const { productIds, quantities, fromCart, note } = req.body;
   try {
     if (!req.user || !req.user.id) {
       return res.status(400).json({ message: 'User information is missing.' });
@@ -17,11 +19,9 @@ const createOrderController = async (req, res) => {
 
     for (let quantity of quantities) {
       if (quantity < 6 || quantity % 6 !== 0) {
-        return res
-          .status(400)
-          .json({
-            message: 'Quantity must be a multiple of 6 and at least 6.',
-          });
+        return res.status(400).json({
+          message: 'Quantity must be a multiple of 6 and at least 6.',
+        });
       }
     }
 
@@ -41,6 +41,8 @@ const createOrderController = async (req, res) => {
     const orderItems = [];
     let totalPrice = 0;
     const currentYear = new Date().getFullYear().toString().slice(-2);
+    let orderProductInfo = [];
+
 
     for (let i = 0; i < productIds.length; i++) {
       const product = await Kit.findById(productIds[i]);
@@ -76,16 +78,19 @@ const createOrderController = async (req, res) => {
       });
       totalPrice += price * quantities[i];
     }
-    
+
     const newOrder = new Order({
       userId: req.user.id,
       orderItems: orderItems,
       totalPrice: totalPrice,
+      note: note || '',
     });
-    
+
     const savedOrder = await newOrder.save();
     if (fromCart) {
-      const userCart = await Cart.findOne({ userId: req.user.id }).populate('items');
+      const userCart = await Cart.findOne({ userId: req.user.id }).populate(
+        'items'
+      );
       if (userCart) {
         userCart.items = userCart?.items?.filter(
           (cartItem) => !productIds?.includes(cartItem?.item?.toString())
@@ -93,6 +98,25 @@ const createOrderController = async (req, res) => {
         await userCart.save();
       }
     }
+
+     // Get user information for the notification
+     const user = await User.findById(req.user.id);
+     const userName = user.role === 'center' ? 
+       user.name : 
+       `${user.firstName || ''} ${user.lastName || ''}`.trim();
+     
+     // Create product description for notification
+     const productDescription = orderProductInfo.map(item => `${item.quantity} x ${item.type}`)
+       .join(', ');
+     
+     // Create notification for admin
+     await createNotification({
+       message: `${userName} ha effettuato un nuovo ordine: ${productDescription} per un totale di €${totalPrice.toFixed(2)}`,
+       senderId: req.user.id,
+       category: 'order',
+       isAdmin: true,
+       userName: userName
+     });
 
     res.status(201).json(savedOrder);
   } catch (err) {
@@ -123,7 +147,6 @@ const createOrder = async (req, res) => {
 
 // Funzione per visualizzare tutti gli ordini (solo per admin)
 const getAllOrders = async (req, res) => {
-
   try {
     if (req.user?.role == 'admin') {
       const orders = await Order.find()
@@ -162,7 +185,9 @@ const getProdottiAcquistati = async (req, res) => {
     const orders = await Order.find({ userId: req.user.id }).populate(
       'orderItems.productId'
     );
-    const courses = await Course.find({ userId: req.user.id }).populate('discente');
+    const courses = await Course.find({ userId: req.user.id }).populate(
+      'discente'
+    );
 
     const prodottiAcquistati = orders.reduce((acc, order) => {
       order.orderItems.forEach((item) => {
@@ -262,10 +287,41 @@ const getProdottiAcquistati = async (req, res) => {
 //   }
 // };
 
+// Add this new function to your controller
+
+const updateShipmentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isShipped } = req.body;
+
+    if (typeof isShipped !== 'boolean') {
+      return res
+        .status(400)
+        .json({ message: 'isShipped must be a boolean value' });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.isShipped = isShipped;
+    await order.save();
+
+    res
+      .status(200)
+      .json({ message: 'Order shipment status updated successfully', order });
+  } catch (err) {
+    console.error('Error updating shipment status:', err);
+    res.status(500).json({ message: 'Error updating order shipment status' });
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getProdottiAcquistati,
   createOrderController,
   getUserOrders,
-}; // Aggiungi la nuova funzione
+  updateShipmentStatus,
+};

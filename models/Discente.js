@@ -18,6 +18,7 @@ const discenteSchema = new mongoose.Schema({
   number: { type: String, required: true },
   zipCode: { type: String, required: true },
   gender: { type: String, required: true },
+  companyAffiliation: { type: String, default: '' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, {
   timestamps: true,

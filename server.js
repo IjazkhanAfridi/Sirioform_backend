@@ -34,6 +34,7 @@ app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/discenti', require('./routes/discenteRoutes'));
 app.use('/api/corsi', require('./routes/courseRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/patent-updates', require('./routes/patentUpdateRoutes'));
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(_dirname, '../frontend/dist', 'index.html'));

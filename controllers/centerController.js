@@ -53,7 +53,7 @@ exports.registerCenter = async (req, res) => {
       username,
       password: hashedPassword,
       isActive: false,
-      role:'center',
+      role: 'center',
       sanitarios: [],
       instructors: [], // Inizializza l'array degli istruttori
     });
@@ -70,8 +70,8 @@ exports.registerCenter = async (req, res) => {
     await createNotification({
       message: `il centro ${name} si è registrato. in attesa di approvazione`,
       senderId: null,
-      category:'centerAccount',
-      userName:newCenter.name,
+      category: 'centerAccount',
+      userName: newCenter.name,
       isAdmin: true,
     });
     res.status(201).json(newCenter);
@@ -82,7 +82,20 @@ exports.registerCenter = async (req, res) => {
 
 exports.updateCenter = async (req, res) => {
   const { centerId } = req.params;
-  const { name, piva, address, city, region, email, phone, username, isActive, role, sanitarios, instructors } = req.body;
+  const {
+    name,
+    piva,
+    address,
+    city,
+    region,
+    email,
+    phone,
+    username,
+    isActive,
+    role,
+    sanitarios,
+    instructors,
+  } = req.body;
 
   try {
     let center = await User.findById(centerId);
@@ -120,11 +133,56 @@ exports.updateCenter = async (req, res) => {
   }
 };
 
-
 exports.getUnapprovedCenters = async (req, res) => {
   try {
     const centers = await User.find({ isActive: false });
     res.json(centers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.toggleCenterStatus = async (req, res) => {
+  const { centerId } = req.params;
+  const { isActive } = req.body;
+
+  try {
+    const center = await User.findById(centerId);
+    if (!center || center.role !== 'center') {
+      return res.status(404).json({ error: 'Centro non trovato' });
+    }
+
+    center.isActive = isActive;
+    await center.save();
+
+    // Send email notification based on new status
+    const emailSubject = isActive ? 'Account Attivato' : 'Account Disattivato';
+    const emailMessage = isActive
+      ? 'Il tuo account è stato attivato. Puoi ora accedere al sistema.'
+      : "Il tuo account è stato disattivato temporaneamente. Contatta l'amministratore per maggiori informazioni.";
+
+    // Send email notification
+    sendEmail(center.email, emailSubject, emailMessage);
+
+    // Create system notification
+    const notificationMessage = isActive
+      ? `Il centro ${center.name} è stato attivato.`
+      : `Il centro ${center.name} è stato disattivato.`;
+
+    await createNotification({
+      message: notificationMessage,
+      senderId: req.user.id,
+      category: 'centerAccount',
+      userName: center.name,
+      isAdmin: true,
+    });
+
+    res.status(200).json({
+      message: isActive
+        ? 'Centro attivato con successo!'
+        : 'Centro disattivato con successo!',
+      center,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -153,7 +211,10 @@ exports.approveCenter = async (req, res) => {
 
 exports.getAllCenters = async (req, res) => {
   try {
-    const centers = await User.find({ isActive: true,role:'center' }).populate('sanitarios');
+    const centers = await User.find({
+      isActive: true,
+      role: 'center',
+    }).populate('sanitarios');
     res.json(centers);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -238,7 +299,6 @@ exports.getCenterSanitarios = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-
 };
 
 // Assegna un istruttore a un centro
@@ -306,7 +366,6 @@ exports.getCenterInstructors = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-
 };
 
 exports.deleteCenter = async (req, res) => {
