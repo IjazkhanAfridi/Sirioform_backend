@@ -212,7 +212,7 @@ exports.approveCenter = async (req, res) => {
 exports.getAllCenters = async (req, res) => {
   try {
     const centers = await User.find({
-      isActive: true,
+      // isActive: true,
       role: 'center',
     }).populate('sanitarios');
     res.json(centers);

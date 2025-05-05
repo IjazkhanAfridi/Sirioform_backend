@@ -154,6 +154,7 @@ exports.approveInstructor = async (req, res) => {
     const instructor = await User.findByIdAndUpdate(
       req.params.id,
       { isActive: true },
+
       { new: true }
     );
 
@@ -172,7 +173,10 @@ exports.approveInstructor = async (req, res) => {
 
 exports.getAllInstructors = async (req, res) => {
   try {
-    const instructors = await User.find({ isActive: true, role: 'instructor' });
+    const instructors = await User.find({ 
+      // isActive: true, 
+      role: 'instructor' 
+    });
     res.json(instructors);
   } catch (err) {
     res.status(500).json({ error: err.message });
