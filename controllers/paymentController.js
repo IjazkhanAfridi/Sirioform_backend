@@ -2,7 +2,11 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Kit = require('../models/Kit');
 const PatentUpdate = require('../models/PatentUpdate');
 
-const calculatePrice = (product, quantity) => {
+const calculatePrice = (product, quantity,productType) => {
+  if (productType === 'patent') {
+    return product.cost; 
+  }
+  
   if (quantity <= 10) {
     return product.cost1;
   } else if (quantity <= 20) {
@@ -10,6 +14,13 @@ const calculatePrice = (product, quantity) => {
   } else {
     return product.cost3;
   }
+  // if (quantity <= 10) {
+  //   return product.cost1;
+  // } else if (quantity <= 20) {
+  //   return product.cost2;
+  // } else {
+  //   return product.cost3;
+  // }
 };
 
 const createPaymentSession = async (req, res) => {
@@ -32,7 +43,7 @@ const createPaymentSession = async (req, res) => {
     
     const amount = products.reduce((total, product, index) => {
       const quantity = quantityArray[index] || 1; 
-      const price = calculatePrice(product, quantity);
+      const price = calculatePrice(product, quantity,productType);
       return total + price * quantity;
     }, 0);
     
