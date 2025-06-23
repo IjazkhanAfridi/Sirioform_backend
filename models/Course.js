@@ -36,7 +36,7 @@ const generateProgressiveNumber = async (course) => {
   const day = dateObj.getDate().toString().padStart(2, '0');
   const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
   const year = dateObj.getFullYear();
-  const italianDateFormat = `${day}/${month}/${year}`;
+  const italianDateFormat = `${year}`;
   let counterDoc = await ProgressiveCounter.findOne();
   if (!counterDoc) {
     counterDoc = new ProgressiveCounter({ counter: 1 });
