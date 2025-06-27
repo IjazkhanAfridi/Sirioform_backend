@@ -23,7 +23,20 @@ const createDiscente = async (req, res) => {
     gender,
     companyAffiliation,
   } = req.body;
+  
   try {
+    // Check if discente with this fiscal code already exists for this user
+    const existingDiscente = await Discente.findOne({
+      codiceFiscale: codiceFiscale,
+      userId: req.user.id
+    });
+
+    if (existingDiscente) {
+      return res.status(400).json({
+        message: 'Un discente con questo codice fiscale esiste già per questo utente'
+      });
+    }
+
     const newDiscente = new Discente({
       nome,
       cognome,
@@ -45,14 +58,83 @@ const createDiscente = async (req, res) => {
       companyAffiliation,
       userId: req.user.id,
     });
+    
     await newDiscente.save();
     res.status(201).json(newDiscente);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: 'Errore durante la creazione del discente' });
+    console.log('error: ', error);
+    
+    // Handle MongoDB duplicate key error specifically
+    if (error.code === 11000) {
+      // Check which field caused the duplicate
+      if (error.keyPattern && error.keyPattern.codiceFiscale) {
+        return res.status(400).json({
+          message: 'Un discente con questo codice fiscale esiste già'
+        });
+      }
+      return res.status(400).json({
+        message: 'Dati duplicati non consentiti'
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Errore durante la creazione del discente' 
+    });
   }
 };
+
+// const createDiscente = async (req, res) => {
+//   const {
+//     nome,
+//     cognome,
+//     codiceFiscale,
+//     indirizzo,
+//     città,
+//     regione,
+//     email,
+//     telefono,
+//     patentNumber,
+//     dateOfBirth,
+//     placeOfBirth,
+//     province,
+//     residenceIn,
+//     street,
+//     number,
+//     zipCode,
+//     gender,
+//     companyAffiliation,
+//   } = req.body;
+//   try {
+//     const newDiscente = new Discente({
+//       nome,
+//       cognome,
+//       codiceFiscale,
+//       indirizzo,
+//       città,
+//       regione,
+//       email,
+//       telefono,
+//       patentNumber: patentNumber == null ? [] : patentNumber,
+//       dateOfBirth,
+//       placeOfBirth,
+//       province,
+//       residenceIn,
+//       street,
+//       number,
+//       zipCode,
+//       gender,
+//       companyAffiliation,
+//       userId: req.user.id,
+//     });
+//     await newDiscente.save();
+//     res.status(201).json(newDiscente);
+//   } catch (error) {
+//     console.log('error: ', error);
+//     res
+//       .status(500)
+//       .json({ message: 'Errore durante la creazione del discente' });
+//   }
+// };
 
 const updateDiscente = async (req, res) => {
   const { id } = req.params;

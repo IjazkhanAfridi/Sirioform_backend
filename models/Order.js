@@ -4,10 +4,16 @@ const Schema = mongoose.Schema;
 // Create a counter schema for order numbers
 const orderCounterSchema = new Schema({
   _id: { type: String, default: 'orderNumber' },
-  seq: { type: Number, default: 0 }
+  seq: { type: Number, default: 0 },
 });
 
 const Counter = mongoose.model('Counter', orderCounterSchema);
+
+const getItalianTime = () => {
+  return new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' })
+  );
+};
 
 const orderSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -21,16 +27,17 @@ const orderSchema = new Schema({
     },
   ],
   totalPrice: { type: Number, required: true },
-  createdAt: { type: Date, default: Date.now },
+  // createdAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: getItalianTime },
   orderNumber: { type: String, unique: true },
   isShipped: { type: Boolean, default: false },
-  note: { type: String, default: '' }  // New note field
+  note: { type: String, default: '' }, // New note field
 });
 
 // Pre-save hook for generating order number (as previously added)
-orderSchema.pre('save', async function(next) {
+orderSchema.pre('save', async function (next) {
   const doc = this;
-  if (!doc.orderNumber) {  
+  if (!doc.orderNumber) {
     // Only increment if orderNumber doesn't exist
     try {
       const counter = await Counter.findByIdAndUpdate(
@@ -56,22 +63,13 @@ orderSchema.methods.getOrderDetails = function () {
     createdAt: this.createdAt,
     orderNumber: this.orderNumber,
     isShipped: this.isShipped,
-    note: this.note
+    note: this.note,
   };
 };
 
 const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order;
-
-
-
-
-
-
-
-
-
 
 // const mongoose = require('mongoose');
 // const Schema = mongoose.Schema;

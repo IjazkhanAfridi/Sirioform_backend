@@ -43,7 +43,6 @@ const createOrderController = async (req, res) => {
     const currentYear = new Date().getFullYear().toString().slice(-2);
     let orderProductInfo = [];
 
-
     for (let i = 0; i < productIds.length; i++) {
       const product = await Kit.findById(productIds[i]);
       if (!product) {
@@ -99,24 +98,28 @@ const createOrderController = async (req, res) => {
       }
     }
 
-     // Get user information for the notification
-     const user = await User.findById(req.user.id);
-     const userName = user.role === 'center' ? 
-       user.name : 
-       `${user.firstName || ''} ${user.lastName || ''}`.trim();
-     
-     // Create product description for notification
-     const productDescription = orderProductInfo.map(item => `${item.quantity} x ${item.type}`)
-       .join(', ');
-     
-     // Create notification for admin
-     await createNotification({
-       message: `${userName} ha effettuato un nuovo ordine: ${productDescription} per un totale di €${totalPrice.toFixed(2)}`,
-       senderId: req.user.id,
-       category: 'order',
-       isAdmin: true,
-       userName: userName
-     });
+    // Get user information for the notification
+    const user = await User.findById(req.user.id);
+    const userName =
+      user.role === 'center'
+        ? user.name
+        : `${user.firstName || ''} ${user.lastName || ''}`.trim();
+
+    // Create product description for notification
+    const productDescription = orderProductInfo
+      .map((item) => `${item.quantity} x ${item.type}`)
+      .join(', ');
+
+    // Create notification for admin
+    await createNotification({
+      message: `${userName} ha effettuato un nuovo ordine: ${productDescription} per un totale di €${totalPrice.toFixed(
+        2
+      )}`,
+      senderId: req.user.id,
+      category: 'order',
+      isAdmin: true,
+      userName: userName,
+    });
 
     res.status(201).json(savedOrder);
   } catch (err) {
@@ -134,7 +137,7 @@ const createOrder = async (req, res) => {
   const order = new Order({
     user: userId,
     orderItems,
-    orderDate: Date.now(),
+    orderDate: new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }),
   });
 
   try {
