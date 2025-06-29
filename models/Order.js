@@ -10,9 +10,17 @@ const orderCounterSchema = new Schema({
 const Counter = mongoose.model('Counter', orderCounterSchema);
 
 const getItalianTime = () => {
-  return new Date(
+  const italianDate = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' })
   );
+  const hours = italianDate.getHours().toString().padStart(2, '0');
+  const minutes = italianDate.getMinutes().toString().padStart(2, '0');
+  // const seconds = italianDate.getSeconds().toString().padStart(2, '0');
+  
+  const formattedDate = new Date(italianDate);
+  formattedDate.setHours(parseInt(hours), parseInt(minutes));
+  
+  return formattedDate;
 };
 
 const orderSchema = new Schema({
