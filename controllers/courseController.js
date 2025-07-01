@@ -160,6 +160,42 @@ const getAllDiscenteExpirationCourses = async (req, res) => {
   }
 };
 
+const getDiscenteExpirations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    let query = { status: 'complete' };
+
+    if (userRole === 'instructor') {
+      query.$or = [{ istruttore: userId }, { userId: userId }];
+    } else if (userRole === 'center') {
+      query.userId = userId;
+    } else {
+      return res.status(403).json({
+        message: 'Ruolo non autorizzato per questa operazione',
+      });
+    }
+
+    const courses = await Course.find(query)
+      .populate('tipologia')
+      .populate('discente')
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName email name role',
+      })
+      .populate('direttoreCorso')
+      .populate('istruttore')
+      .lean();
+
+    res.status(200).json(courses);
+  } catch (error) {
+    console.error('Error fetching role-based discente expirations:', error);
+    res.status(500).json({
+      message: 'Errore durante il recupero dei corsi scaduti del discente',
+    });
+  }
+};
+
 const getCoursesByDiscenteId = async (req, res) => {
   try {
     const discenteId = req.params.id;
@@ -968,4 +1004,5 @@ module.exports = {
   deleteCourseTypes,
   getCourseTypes,
   getAllDiscenteExpirationCourses,
+  getDiscenteExpirations
 };

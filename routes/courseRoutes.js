@@ -19,6 +19,7 @@ const {
   getCourseTypes,
   deleteCourseTypes,
   getAllDiscenteExpirationCourses,
+  getDiscenteExpirations,
 } = require('../controllers/courseController');
 const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
@@ -36,6 +37,8 @@ router.get('/user-courses/:id', auth, getCourseById);
 router.get('/discente-courses/:id', auth, getCoursesByDiscenteId);
 router.get('/user-course/:id', auth, getSingleCourseById);
 router.get('/all-discente-expirations', auth, isAdmin, getAllDiscenteExpirationCourses);
+router.get('/my-discente-expirations', auth, getDiscenteExpirations);
+
 router.get('/', auth, isAdmin, getAllCourses);
 router.post(
   '/courses/:courseId/upload-report',

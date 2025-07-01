@@ -59,8 +59,9 @@ exports.getAllSanitarios = async (req, res) => {
         const associatedCourses = await Course.find({
           direttoreCorso: sanitario._id,
         })
-        .select('tipologia')
-        .populate('tipologia', 'type code');
+          .select('tipologia progressiveNumber')
+          .populate('tipologia', 'type code');
+        console.log('associatedCourses: ', associatedCourses);
 
         // Return sanitario with its associations
         return {
@@ -70,14 +71,15 @@ exports.getAllSanitarios = async (req, res) => {
             instructors: associatedInstructors,
             courses: associatedCourses.map((course) => ({
               _id: course._id,
-              code:course.tipologia.code,
-              type:course.tipologia.type,
+              code: course.tipologia.code,
+              type: course.tipologia.type,
+              progressiveNumber: course.progressiveNumber,
             })),
           },
         };
       })
     );
-    
+
     res.json(enhancedSanitarios);
   } catch (err) {
     console.error('Error retrieving sanitarios with associations:', err);
