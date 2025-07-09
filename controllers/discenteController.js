@@ -69,7 +69,7 @@ const createDiscente = async (req, res) => {
       // Check which field caused the duplicate
       if (error.keyPattern && error.keyPattern.codiceFiscale) {
         return res.status(400).json({
-          message: 'Un discente con questo codice fiscale esiste già'
+          message: 'codice fiscale già presente'
         });
       }
       return res.status(400).json({
@@ -141,6 +141,13 @@ const updateDiscente = async (req, res) => {
   const updateFields = req.body;
 
   try {
+    const cleanedFields = {};
+    Object.keys(updateFields).forEach(key => {
+      if (updateFields[key] !== null && updateFields[key] !== '') {
+        cleanedFields[key] = updateFields[key];
+      }
+    });
+
     const updatedDiscente = await Discente.findByIdAndUpdate(
       id,
       { $set: updateFields },

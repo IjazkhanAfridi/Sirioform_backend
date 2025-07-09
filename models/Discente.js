@@ -6,7 +6,7 @@ const discenteSchema = new mongoose.Schema(
     cognome: { type: String, required: true },
     codiceFiscale: { type: String, required: true },
     indirizzo: { type: String },
-    città: { type: String, required: true },
+    città: { type: String },
     regione: { type: String, required: true },
     email: { type: String, required: true },
     telefono: { type: String, required: true },

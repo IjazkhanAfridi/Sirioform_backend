@@ -20,6 +20,7 @@ const {
   deleteCourseTypes,
   getAllDiscenteExpirationCourses,
   getDiscenteExpirations,
+  downloadCertificate, downloadAllCertificates 
 } = require('../controllers/courseController');
 const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
@@ -65,5 +66,8 @@ router.post('/courses/:courseId/send-email', sendCertificate);
 router.post('/courses/course-type', auth, courseType);
 router.delete('/courses/course-type/:id', auth, deleteCourseTypes);
 router.get('/courses/course-type', getCourseTypes);
+
+router.get('/courses/:courseId/certificate/:discenteId', auth, downloadCertificate);
+router.get('/courses/:courseId/certificates/download-all', auth, downloadAllCertificates);
 
 module.exports = router;

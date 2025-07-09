@@ -8,7 +8,9 @@ const Discente = require('../models/Discente');
 const generateCertificate = require('../utils/generateCertificate');
 const sendEmail = require('../utils/emailService');
 const path = require('path');
+const archiver = require('archiver');
 const CourseType = require('../models/CourseType');
+const fs = require('fs');
 
 // Funzione per creare un nuovo corso
 const createCourse = async (req, res) => {
@@ -206,15 +208,22 @@ const getCoursesByDiscenteId = async (req, res) => {
         .json({ message: 'Format invalido per il discente' });
     }
 
-    // Check if the user is an admin
-    const query =
-      req.user.role === 'admin'
-        ? { discente: discenteId } // Admin can see all courses for the discente
-        : { userId: req.user.id, discente: discenteId }; // Regular users see only their courses
+    let query;
+    if (req.user.role === 'admin') {
+      query = { 
+        discente: { $in: [discenteId] } 
+      };
+    } else {
+      query = { 
+        userId: req.user.id, 
+        discente: { $in: [discenteId] } 
+      };
+    }
 
     const courses = await Course.find(query)
-      .populate('tipologia')
-      .populate('discente');
+    .populate('tipologia')
+    .populate('discente');
+    console.log('courses: ', courses);
 
     res.status(200).json(courses);
   } catch (error) {
@@ -984,6 +993,115 @@ const deleteCourseTypes = async (req, res) => {
     res.status(500).json({ message: 'Error' });
   }
 };
+
+const downloadCertificate = async (req, res) => {
+  try {
+    const { courseId, discenteId } = req.params;
+    
+    // Find the course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Corso non trovato' });
+    }
+
+    // Find the certificate for this discente
+    const certificate = course.certificates?.find(cert => 
+      cert.discenteId?.toString() === discenteId.toString()
+    );
+
+    if (!certificate) {
+      return res.status(404).json({ 
+        message: 'Certificato non trovato per questo discente' 
+      });
+    }
+
+    // Build the file path
+    const filePath = path.join(__dirname, '..', certificate.certificatePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        message: 'File del certificato non trovato sul server' 
+      });
+    }
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="certificate-${discenteId}.pdf"`);
+    
+    // Send the file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading certificate:', error);
+    res.status(500).json({ 
+      message: 'Errore durante il download del certificato',
+      error: error.message 
+    });
+  }
+};
+
+// Download all certificates as ZIP
+const downloadAllCertificates = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    // Find the course
+    const course = await Course.findById(courseId).populate('discente');
+    if (!course) {
+      return res.status(404).json({ message: 'Corso non trovato' });
+    }
+
+    if (!course.certificates || course.certificates.length === 0) {
+      return res.status(404).json({ message: 'Nessun certificato trovato per questo corso' });
+    }
+
+    // Set headers for ZIP download
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="certificati-corso-${course.progressiveNumber}.zip"`);
+
+    // Create ZIP archive
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Compression level
+    });
+
+    // Handle archive errors
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      res.status(500).json({ message: 'Errore durante la creazione del file ZIP' });
+    });
+
+    // Pipe archive to response
+    archive.pipe(res);
+
+    // Add each certificate to the archive
+    for (const certificate of course.certificates) {
+      const filePath = path.join(__dirname, '..', certificate.certificatePath);
+      
+      if (fs.existsSync(filePath)) {
+        // Find the discente name for better filename
+        const discente = course.discente.find(d => 
+          d._id.toString() === certificate.discenteId.toString()
+        );
+        
+        const fileName = discente 
+          ? `${discente.nome}_${discente.cognome}_certificato.pdf`
+          : `certificato_${certificate.discenteId}.pdf`;
+        
+        archive.file(filePath, { name: fileName });
+      }
+    }
+
+    // Finalize the archive
+    archive.finalize();
+  } catch (error) {
+    console.error('Error downloading all certificates:', error);
+    res.status(500).json({ 
+      message: 'Errore durante il download dei certificati',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getCoursesByUser,
@@ -1004,5 +1122,7 @@ module.exports = {
   deleteCourseTypes,
   getCourseTypes,
   getAllDiscenteExpirationCourses,
-  getDiscenteExpirations
+  getDiscenteExpirations,
+downloadAllCertificates,
+downloadCertificate
 };
