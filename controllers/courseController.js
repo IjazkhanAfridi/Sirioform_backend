@@ -419,14 +419,28 @@ const updateCourseStatus = async (req, res) => {
         )
         .flatMap((item) => item.progressiveNumbers);
 
-      // Check if every student has at least one patent number in the aggregated list
-      const allDiscentesHaveMatch = course.discente.every((discente) =>
-        discente.patentNumber.some((patentNum) =>
-          allProgressiveNumbers.includes(patentNum)
-        )
-      );
+      // Check if every student has at least one kit assignment for this course
+      const courseDiscenti = await Discente.find({
+        _id: { $in: course.discente }
+      });
 
-      if (!allDiscentesHaveMatch) {
+      const allDiscentesHaveKitForCourse = courseDiscenti.every((discente) => {
+        // Check if discente has a kit assignment for this specific course
+        const hasKitForThisCourse = discente.kitAssignments.some((assignment) =>
+          assignment.courseId.toString() === course._id.toString()
+        );
+
+        // Fallback: check if discente has any patent number that matches the course kit type
+        if (!hasKitForThisCourse && discente.patentNumber.length > 0) {
+          return discente.patentNumber.some((patentNum) =>
+            allProgressiveNumbers.includes(patentNum)
+          );
+        }
+
+        return hasKitForThisCourse;
+      });
+
+      if (!allDiscentesHaveKitForCourse) {
         return res.status(400).json({
           message: `Bisogna associare un kit tipo ${course.tipologia.type} ad ogni studente prima di terminare il corso.`,
         });

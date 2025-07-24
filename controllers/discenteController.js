@@ -33,7 +33,7 @@ const createDiscente = async (req, res) => {
 
     if (existingDiscente) {
       return res.status(400).json({
-        message: 'Un discente con questo codice fiscale esiste già per questo utente'
+        message: 'Codice fiscale già inserito, si prega di ricontrollare.'
       });
     }
 
@@ -206,14 +206,20 @@ const getAllDiscenti = async (req, res) => {
 
 const updateDiscentePatentNumber = async (req, res) => {
   const { id } = req.params;
-  const { patentNumber } = req.body;
+  const { patentNumber, courseId, instructorId, centerId } = req.body;
 
   try {
-    // Check if patentNumber exists in the request
+    // Check if patentNumber and courseId exist in the request
     if (!patentNumber) {
       return res
         .status(400)
         .json({ message: 'Il numero di patente è richiesto' });
+    }
+
+    if (!courseId) {
+      return res
+        .status(400)
+        .json({ message: 'L\'ID del corso è richiesto' });
     }
 
     // Find the kit type based on the given patent number
@@ -226,37 +232,92 @@ const updateDiscentePatentNumber = async (req, res) => {
         .status(404)
         .json({ message: 'Kit non trovato per il numero di patente fornito' });
     }
-    console.log('order: ', order);
-    console.log('orderItems: ', order?.orderItems);
 
     // Extract the type of kit associated with the given patent number
-    const kitType = order.orderItems.find((item) =>
+    const kitItem = order.orderItems.find((item) =>
       item.progressiveNumbers.includes(patentNumber)
-    ).productId.type;
+    );
+    const kitType = kitItem.productId.type;
 
-    console.log('kitType: ', kitType);
-    // Fetch the discente and check if they already have a patent number for the same type
+    // Fetch the discente and check if they already have this kit number for this course
     const discente = await Discente.findById(id);
     if (!discente) {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
 
-    const hasMatchingPatentNumber = order.orderItems.some((orderItem) => {
-      return orderItem.progressiveNumbers.some((number) =>
-        discente.patentNumber.includes(number)
-      );
-    });
+    // Check if this kit number is already assigned to this discente for this course
+    const existingAssignment = discente.kitAssignments.find(
+      (assignment) => 
+        assignment.kitNumber === patentNumber && 
+        assignment.courseId.toString() === courseId
+    );
 
-    if (hasMatchingPatentNumber) {
+    if (existingAssignment) {
       return res.status(400).json({
-        message: `Il discente ha già un numero di patente per il tipo di kit ${kitType}`,
+        message: `Il discente ha già questo numero di kit (${patentNumber}) assegnato per questo corso`,
       });
     }
 
-    // Find the discente and push the new patent number to the array
+    // Check if this kit number is already assigned to this discente for any course of the same type
+    const existingKitTypeAssignment = discente.kitAssignments.find(
+      (assignment) => 
+        assignment.kitNumber === patentNumber
+    );
+
+    if (existingKitTypeAssignment) {
+      return res.status(400).json({
+        message: `Questo numero di kit (${patentNumber}) è già stato assegnato a questo discente`,
+      });
+    }
+
+    // Get course details for the assignment
+    const Course = require('../models/Course');
+    const course = await Course.findById(courseId)
+      .populate('tipologia')
+      .populate('userId')
+      .populate('istruttore');
+
+    if (!course) {
+      return res.status(404).json({ message: 'Corso non trovato' });
+    }
+
+    // Get instructor details if provided
+    let instructorName = '';
+    if (instructorId) {
+      const User = require('../models/User');
+      const instructor = await User.findById(instructorId);
+      if (instructor) {
+        instructorName = `${instructor.firstName} ${instructor.lastName}`;
+      }
+    }
+
+    // Get center details
+    const center = course.userId;
+    const centerName = center.role === 'center' ? center.name : `${center.firstName} ${center.lastName}`;
+
+    // Create new kit assignment object
+    const newKitAssignment = {
+      kitNumber: patentNumber,
+      courseId: courseId,
+      courseName: course.tipologia?.type || 'Unknown Course',
+      courseType: course.tipologia?.type || 'Unknown Type',
+      instructorId: instructorId || null,
+      instructorName: instructorName,
+      centerId: center._id,
+      centerName: centerName,
+      assignedDate: new Date(),
+      kitType: kitType
+    };
+
+    // Add the new kit assignment and also add to patentNumber array for backward compatibility
     const updatedDiscente = await Discente.findByIdAndUpdate(
       id,
-      { $push: { patentNumber: patentNumber } },
+      { 
+        $push: { 
+          kitAssignments: newKitAssignment,
+          patentNumber: patentNumber 
+        }
+      },
       { new: true, runValidators: true }
     );
 
@@ -264,8 +325,13 @@ const updateDiscentePatentNumber = async (req, res) => {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
 
-    res.status(200).json(updatedDiscente);
+    res.status(200).json({
+      message: 'Kit assegnato con successo',
+      discente: updatedDiscente,
+      kitAssignment: newKitAssignment
+    });
   } catch (error) {
+    console.error('Error updating discente patent number:', error);
     res.status(500).json({
       message: "Errore durante l'aggiornamento del numero di patente",
     });
@@ -291,6 +357,190 @@ const searchDiscente = async (req, res) => {
     res.status(200).json(discenti);
   } catch (error) {
     res.status(500).json({ message: 'Errore nella ricerca dei discenti' });
+  }
+};
+
+// Get kit assignments for a specific discente and course
+const getDiscenteKitAssignments = async (req, res) => {
+  const { discenteId, courseId } = req.params;
+  
+  try {
+    const discente = await Discente.findById(discenteId)
+      .populate('kitAssignments.courseId', 'tipologia progressiveNumber')
+      .populate('kitAssignments.instructorId', 'firstName lastName')
+      .populate('kitAssignments.centerId', 'name firstName lastName');
+
+    if (!discente) {
+      return res.status(404).json({ message: 'Discente non trovato' });
+    }
+
+    let kitAssignments = discente.kitAssignments;
+
+    // Filter by course if courseId is provided
+    if (courseId) {
+      kitAssignments = kitAssignments.filter(
+        assignment => assignment.courseId.toString() === courseId
+      );
+    }
+
+    res.status(200).json({
+      discente: {
+        _id: discente._id,
+        nome: discente.nome,
+        cognome: discente.cognome,
+        codiceFiscale: discente.codiceFiscale
+      },
+      kitAssignments
+    });
+  } catch (error) {
+    console.error('Error fetching kit assignments:', error);
+    res.status(500).json({ message: 'Errore durante il recupero delle assegnazioni kit' });
+  }
+};
+
+// Remove a kit assignment from a discente
+const removeKitAssignment = async (req, res) => {
+  const { discenteId, assignmentId } = req.params;
+  
+  try {
+    const discente = await Discente.findById(discenteId);
+    if (!discente) {
+      return res.status(404).json({ message: 'Discente non trovato' });
+    }
+
+    // Find the kit assignment to remove
+    const assignmentToRemove = discente.kitAssignments.id(assignmentId);
+    if (!assignmentToRemove) {
+      return res.status(404).json({ message: 'Assegnazione kit non trovata' });
+    }
+
+    const kitNumber = assignmentToRemove.kitNumber;
+
+    // Remove from kitAssignments array
+    discente.kitAssignments.pull(assignmentId);
+
+    // Also remove from patentNumber array for backward compatibility
+    discente.patentNumber = discente.patentNumber.filter(num => num !== kitNumber);
+
+    await discente.save();
+
+    res.status(200).json({
+      message: 'Assegnazione kit rimossa con successo',
+      discente
+    });
+  } catch (error) {
+    console.error('Error removing kit assignment:', error);
+    res.status(500).json({ message: 'Errore durante la rimozione dell\'assegnazione kit' });
+  }
+};
+
+// Get all kit assignments for a course
+const getCourseKitAssignments = async (req, res) => {
+  const { courseId } = req.params;
+  
+  try {
+    const discenti = await Discente.find({
+      'kitAssignments.courseId': courseId
+    }).populate({
+      path: 'kitAssignments',
+      match: { courseId: courseId },
+      populate: [
+        { path: 'courseId', select: 'tipologia progressiveNumber' },
+        { path: 'instructorId', select: 'firstName lastName' },
+        { path: 'centerId', select: 'name firstName lastName' }
+      ]
+    });
+
+    const assignments = discenti.map(discente => ({
+      discente: {
+        _id: discente._id,
+        nome: discente.nome,
+        cognome: discente.cognome,
+        codiceFiscale: discente.codiceFiscale
+      },
+      kitAssignments: discente.kitAssignments.filter(
+        assignment => assignment.courseId.toString() === courseId
+      )
+    })).filter(item => item.kitAssignments.length > 0);
+
+    res.status(200).json(assignments);
+  } catch (error) {
+    console.error('Error fetching course kit assignments:', error);
+    res.status(500).json({ message: 'Errore durante il recupero delle assegnazioni kit del corso' });
+  }
+};
+
+// Migration function to convert existing patentNumbers to kitAssignments
+const migratePatentNumbersToKitAssignments = async (req, res) => {
+  try {
+    const discenti = await Discente.find({ 
+      patentNumber: { $exists: true, $ne: [] },
+      kitAssignments: { $size: 0 } // Only migrate if no kit assignments exist
+    });
+
+    let migratedCount = 0;
+
+    for (const discente of discenti) {
+      const Course = require('../models/Course');
+      
+      // Find courses where this discente is enrolled
+      const courses = await Course.find({ 
+        discente: discente._id 
+      }).populate('tipologia').populate('userId');
+
+      for (const patentNumber of discente.patentNumber) {
+        // Find the order containing this patent number
+        const order = await Order.findOne({
+          'orderItems.progressiveNumbers': patentNumber,
+        }).populate('orderItems.productId');
+
+        if (order) {
+          const kitItem = order.orderItems.find((item) =>
+            item.progressiveNumbers.includes(patentNumber)
+          );
+
+          if (kitItem) {
+            // Try to match with a course of the same kit type
+            const matchingCourse = courses.find(course => 
+              course.tipologia._id.toString() === kitItem.productId._id.toString()
+            );
+
+            if (matchingCourse) {
+              const center = matchingCourse.userId;
+              const centerName = center.role === 'center' ? center.name : `${center.firstName} ${center.lastName}`;
+
+              const newKitAssignment = {
+                kitNumber: patentNumber,
+                courseId: matchingCourse._id,
+                courseName: matchingCourse.tipologia?.type || 'Unknown Course',
+                courseType: matchingCourse.tipologia?.type || 'Unknown Type',
+                instructorId: null,
+                instructorName: '',
+                centerId: center._id,
+                centerName: centerName,
+                assignedDate: new Date(),
+                kitType: kitItem.productId.type
+              };
+
+              discente.kitAssignments.push(newKitAssignment);
+            }
+          }
+        }
+      }
+
+      if (discente.kitAssignments.length > 0) {
+        await discente.save();
+        migratedCount++;
+      }
+    }
+
+    res.status(200).json({
+      message: `Migrazione completata. ${migratedCount} discenti migrati.`,
+      migratedCount
+    });
+  } catch (error) {
+    console.error('Error during migration:', error);
+    res.status(500).json({ message: 'Errore durante la migrazione' });
   }
 };
 
@@ -349,5 +599,9 @@ module.exports = {
   getUserDiscentiById,
   updateDiscentePatentNumber,
   searchDiscente,
-  associateDiscenteWithUser
+  associateDiscenteWithUser,
+  getDiscenteKitAssignments,
+  removeKitAssignment,
+  getCourseKitAssignments,
+  migratePatentNumbersToKitAssignments
 };

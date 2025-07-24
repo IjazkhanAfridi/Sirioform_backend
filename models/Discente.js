@@ -1,5 +1,19 @@
 const mongoose = require('mongoose');
 
+// Kit Assignment Schema for associating kit numbers with courses
+const kitAssignmentSchema = new mongoose.Schema({
+  kitNumber: { type: String, required: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+  courseName: { type: String },
+  courseType: { type: String },
+  instructorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  instructorName: { type: String },
+  centerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  centerName: { type: String },
+  assignedDate: { type: Date, default: Date.now },
+  kitType: { type: String }, // Type of kit (e.g., "Basic", "Advanced", etc.)
+}, { _id: true });
+
 const discenteSchema = new mongoose.Schema(
   {
     nome: { type: String, required: true },
@@ -10,7 +24,8 @@ const discenteSchema = new mongoose.Schema(
     regione: { type: String, required: true },
     email: { type: String, required: true },
     telefono: { type: String, required: true },
-    patentNumber: { type: [String] },
+    patentNumber: { type: [String], default: [] }, // Keep for backward compatibility
+    kitAssignments: [kitAssignmentSchema], // New structured kit assignments
     dateOfBirth: { type: Date, required: true },
     placeOfBirth: { type: String, required: true },
     province: { type: String, required: true },

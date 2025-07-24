@@ -1,5 +1,17 @@
 const express = require('express');
-const { createDiscente, getAllDiscenti,getUserDiscenti, getUserDiscentiById ,updateDiscentePatentNumber, associateDiscenteWithUser, searchDiscente} = require('../controllers/discenteController'); 
+const { 
+  createDiscente, 
+  getAllDiscenti,
+  getUserDiscenti, 
+  getUserDiscentiById ,
+  updateDiscentePatentNumber, 
+  associateDiscenteWithUser, 
+  searchDiscente,
+  getDiscenteKitAssignments,
+  removeKitAssignment,
+  getCourseKitAssignments,
+  migratePatentNumbersToKitAssignments
+} = require('../controllers/discenteController'); 
 const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin')
 const router = express.Router();
@@ -15,5 +27,10 @@ router.patch('/:id', auth, updateDiscentePatentNumber);
 router.get('/search/term', auth, searchDiscente);
 router.post('/associate', auth, associateDiscenteWithUser);
 
+// New kit assignment routes
+router.get('/:discenteId/kit-assignments/:courseId?', auth, getDiscenteKitAssignments);
+router.delete('/:discenteId/kit-assignments/:assignmentId', auth, removeKitAssignment);
+router.get('/course/:courseId/kit-assignments', auth, getCourseKitAssignments);
+router.post('/migrate-kit-assignments', auth, isAdmin, migratePatentNumbersToKitAssignments);
 
 module.exports = router;
