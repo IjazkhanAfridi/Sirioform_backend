@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-module.exports = function(req, res, next) {
+module.exports = function (req, res, next) {
   // console.log('Inizio middleware auth');
   const token = req.header('x-auth-token');
   // console.log('Token ricevuto:', token);

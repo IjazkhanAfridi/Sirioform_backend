@@ -1,18 +1,25 @@
 const mongoose = require('mongoose');
 
 // Kit Assignment Schema for associating kit numbers with courses
-const kitAssignmentSchema = new mongoose.Schema({
-  kitNumber: { type: String, required: true },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-  courseName: { type: String },
-  courseType: { type: String },
-  instructorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  instructorName: { type: String },
-  centerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  centerName: { type: String },
-  assignedDate: { type: Date, default: Date.now },
-  kitType: { type: String }, // Type of kit (e.g., "Basic", "Advanced", etc.)
-}, { _id: true });
+const kitAssignmentSchema = new mongoose.Schema(
+  {
+    kitNumber: { type: String, required: true },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
+    },
+    courseName: { type: String },
+    courseType: { type: String },
+    instructorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    instructorName: { type: String },
+    centerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    centerName: { type: String },
+    assignedDate: { type: Date, default: Date.now },
+    kitType: { type: String }, // Type of kit (e.g., "Basic", "Advanced", etc.)
+  },
+  { _id: true }
+);
 
 const discenteSchema = new mongoose.Schema(
   {

@@ -24,8 +24,7 @@ const isAdmin = require('../middleware/isAdmin');
 // Route per la registrazione di un nuovo centro
 router.post('/register', registerCenter);
 // update route
-
-router.patch('/update/:centerId', updateCenter);
+router.patch('/update/:centerId', auth, updateCenter);
 
 // Route per ottenere i centri non approvati (richiede autenticazione)
 router.get('/unapproved', auth, getUnapprovedCenters);

@@ -20,6 +20,8 @@ const UserSchema = new Schema({
   address: { type: String },
   city: { type: String },
   region: { type: String },
+  provincia: { type: String },
+  cap: { type: String },
   // Fields for Center and Instructor roles
   name: { type: String },
   piva: { type: String },

@@ -11,12 +11,12 @@ const migrateKitAssignments = async () => {
     console.log('Connected to MongoDB');
 
     // Find all discenti with patentNumbers but no kitAssignments
-    const discenti = await Discente.find({ 
+    const discenti = await Discente.find({
       patentNumber: { $exists: true, $ne: [] },
       $or: [
         { kitAssignments: { $exists: false } },
-        { kitAssignments: { $size: 0 } }
-      ]
+        { kitAssignments: { $size: 0 } },
+      ],
     });
 
     console.log(`Found ${discenti.length} discenti to migrate`);
@@ -26,11 +26,13 @@ const migrateKitAssignments = async () => {
 
     for (const discente of discenti) {
       console.log(`\nMigrating discente: ${discente.nome} ${discente.cognome}`);
-      
+
       // Find courses where this discente is enrolled
-      const courses = await Course.find({ 
-        discente: discente._id 
-      }).populate('tipologia').populate('userId');
+      const courses = await Course.find({
+        discente: discente._id,
+      })
+        .populate('tipologia')
+        .populate('userId');
 
       console.log(`  Found ${courses.length} courses for this discente`);
 
@@ -38,7 +40,7 @@ const migrateKitAssignments = async () => {
 
       for (const patentNumber of discente.patentNumber) {
         console.log(`  Processing patent number: ${patentNumber}`);
-        
+
         // Find the order containing this patent number
         const order = await Order.findOne({
           'orderItems.progressiveNumbers': patentNumber,
@@ -51,19 +53,24 @@ const migrateKitAssignments = async () => {
 
           if (kitItem) {
             console.log(`    Found kit type: ${kitItem.productId.type}`);
-            
+
             // Try to match with a course of the same kit type
-            const matchingCourse = courses.find(course => 
-              course.tipologia._id.toString() === kitItem.productId._id.toString()
+            const matchingCourse = courses.find(
+              (course) =>
+                course.tipologia._id.toString() ===
+                kitItem.productId._id.toString()
             );
 
             if (matchingCourse) {
-              console.log(`    Matched with course: ${matchingCourse.tipologia.type}`);
-              
+              console.log(
+                `    Matched with course: ${matchingCourse.tipologia.type}`
+              );
+
               const center = matchingCourse.userId;
-              const centerName = center.role === 'center' 
-                ? center.name 
-                : `${center.firstName} ${center.lastName}`;
+              const centerName =
+                center.role === 'center'
+                  ? center.name
+                  : `${center.firstName} ${center.lastName}`;
 
               const newKitAssignment = {
                 kitNumber: patentNumber,
@@ -75,15 +82,19 @@ const migrateKitAssignments = async () => {
                 centerId: center._id,
                 centerName: centerName,
                 assignedDate: matchingCourse.createdAt || new Date(),
-                kitType: kitItem.productId.type
+                kitType: kitItem.productId.type,
               };
 
               newKitAssignments.push(newKitAssignment);
               assignmentCount++;
-              console.log(`    Created kit assignment for course: ${matchingCourse.progressiveNumber}`);
+              console.log(
+                `    Created kit assignment for course: ${matchingCourse.progressiveNumber}`
+              );
             } else {
-              console.log(`    No matching course found for kit type: ${kitItem.productId.type}`);
-              
+              console.log(
+                `    No matching course found for kit type: ${kitItem.productId.type}`
+              );
+
               // Create a generic assignment without course association
               const newKitAssignment = {
                 kitNumber: patentNumber,
@@ -95,7 +106,7 @@ const migrateKitAssignments = async () => {
                 centerId: null,
                 centerName: 'Unknown',
                 assignedDate: discente.createdAt || new Date(),
-                kitType: kitItem.productId.type
+                kitType: kitItem.productId.type,
               };
 
               newKitAssignments.push(newKitAssignment);
@@ -103,7 +114,9 @@ const migrateKitAssignments = async () => {
               console.log(`    Created legacy kit assignment`);
             }
           } else {
-            console.log(`    Kit item not found in order for patent number: ${patentNumber}`);
+            console.log(
+              `    Kit item not found in order for patent number: ${patentNumber}`
+            );
           }
         } else {
           console.log(`    Order not found for patent number: ${patentNumber}`);
@@ -115,11 +128,13 @@ const migrateKitAssignments = async () => {
         if (!discente.kitAssignments) {
           discente.kitAssignments = [];
         }
-        
+
         discente.kitAssignments.push(...newKitAssignments);
         await discente.save();
         migratedCount++;
-        console.log(`  Successfully migrated ${newKitAssignments.length} kit assignments`);
+        console.log(
+          `  Successfully migrated ${newKitAssignments.length} kit assignments`
+        );
       } else {
         console.log(`  No kit assignments created for this discente`);
       }
@@ -128,7 +143,6 @@ const migrateKitAssignments = async () => {
     console.log(`\nMigration completed:`);
     console.log(`- Total discenti migrated: ${migratedCount}`);
     console.log(`- Total kit assignments created: ${assignmentCount}`);
-
   } catch (error) {
     console.error('Error during migration:', error);
   } finally {

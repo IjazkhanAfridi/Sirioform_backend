@@ -23,17 +23,17 @@ const createDiscente = async (req, res) => {
     gender,
     companyAffiliation,
   } = req.body;
-  
+
   try {
     // Check if discente with this fiscal code already exists for this user
     const existingDiscente = await Discente.findOne({
       codiceFiscale: codiceFiscale,
-      userId: req.user.id
+      userId: req.user.id,
     });
 
     if (existingDiscente) {
       return res.status(400).json({
-        message: 'Codice fiscale già inserito, si prega di ricontrollare.'
+        message: 'Codice fiscale già inserito, si prega di ricontrollare.',
       });
     }
 
@@ -58,27 +58,27 @@ const createDiscente = async (req, res) => {
       companyAffiliation,
       userId: req.user.id,
     });
-    
+
     await newDiscente.save();
     res.status(201).json(newDiscente);
   } catch (error) {
     console.log('error: ', error);
-    
+
     // Handle MongoDB duplicate key error specifically
     if (error.code === 11000) {
       // Check which field caused the duplicate
       if (error.keyPattern && error.keyPattern.codiceFiscale) {
         return res.status(400).json({
-          message: 'codice fiscale già presente'
+          message: 'codice fiscale già presente',
         });
       }
       return res.status(400).json({
-        message: 'Dati duplicati non consentiti'
+        message: 'Dati duplicati non consentiti',
       });
     }
-    
-    res.status(500).json({ 
-      message: 'Errore durante la creazione del discente' 
+
+    res.status(500).json({
+      message: 'Errore durante la creazione del discente',
     });
   }
 };
@@ -142,7 +142,7 @@ const updateDiscente = async (req, res) => {
 
   try {
     const cleanedFields = {};
-    Object.keys(updateFields).forEach(key => {
+    Object.keys(updateFields).forEach((key) => {
       if (updateFields[key] !== null && updateFields[key] !== '') {
         cleanedFields[key] = updateFields[key];
       }
@@ -217,9 +217,7 @@ const updateDiscentePatentNumber = async (req, res) => {
     }
 
     if (!courseId) {
-      return res
-        .status(400)
-        .json({ message: 'L\'ID del corso è richiesto' });
+      return res.status(400).json({ message: "L'ID del corso è richiesto" });
     }
 
     // Find the kit type based on the given patent number
@@ -245,28 +243,25 @@ const updateDiscentePatentNumber = async (req, res) => {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
 
-    // Check if this kit number is already assigned to this discente for this course
-    const existingAssignment = discente.kitAssignments.find(
-      (assignment) => 
-        assignment.kitNumber === patentNumber && 
-        assignment.courseId.toString() === courseId
+    // Check if this discente already has a kit assigned for this specific course
+    const existingCourseAssignment = discente.kitAssignments.find(
+      (assignment) => assignment.courseId.toString() === courseId
     );
 
-    if (existingAssignment) {
+    if (existingCourseAssignment) {
       return res.status(400).json({
-        message: `Il discente ha già questo numero di kit (${patentNumber}) assegnato per questo corso`,
+        message: `Il discente ha già un kit (${existingCourseAssignment.kitNumber}) assegnato per questo corso. Un discente può avere solo un kit per corso.`,
       });
     }
 
-    // Check if this kit number is already assigned to this discente for any course of the same type
-    const existingKitTypeAssignment = discente.kitAssignments.find(
-      (assignment) => 
-        assignment.kitNumber === patentNumber
-    );
+    // Check if this specific kit number is already assigned to any other discente
+    const existingKitAssignment = await Discente.findOne({
+      'kitAssignments.kitNumber': patentNumber,
+    });
 
-    if (existingKitTypeAssignment) {
+    if (existingKitAssignment && existingKitAssignment._id.toString() !== id) {
       return res.status(400).json({
-        message: `Questo numero di kit (${patentNumber}) è già stato assegnato a questo discente`,
+        message: `Questo numero di kit (${patentNumber}) è già stato assegnato a un altro discente`,
       });
     }
 
@@ -281,6 +276,20 @@ const updateDiscentePatentNumber = async (req, res) => {
       return res.status(404).json({ message: 'Corso non trovato' });
     }
 
+    // Check if the course allows kit assignment based on its status
+    if (!['active', 'unactive', 'update'].includes(course.status)) {
+      return res.status(400).json({
+        message: `Impossibile assegnare kit. Il corso ha stato: ${course.status}. I kit possono essere assegnati solo per corsi con stato: active, unactive, o update.`,
+      });
+    }
+
+    // Check if the discente is actually enrolled in this course
+    if (!course.discente.includes(id)) {
+      return res.status(400).json({
+        message: 'Il discente non è iscritto a questo corso',
+      });
+    }
+
     // Get instructor details if provided
     let instructorName = '';
     if (instructorId) {
@@ -293,7 +302,10 @@ const updateDiscentePatentNumber = async (req, res) => {
 
     // Get center details
     const center = course.userId;
-    const centerName = center.role === 'center' ? center.name : `${center.firstName} ${center.lastName}`;
+    const centerName =
+      center.role === 'center'
+        ? center.name
+        : `${center.firstName} ${center.lastName}`;
 
     // Create new kit assignment object
     const newKitAssignment = {
@@ -306,17 +318,17 @@ const updateDiscentePatentNumber = async (req, res) => {
       centerId: center._id,
       centerName: centerName,
       assignedDate: new Date(),
-      kitType: kitType
+      kitType: kitType,
     };
 
     // Add the new kit assignment and also add to patentNumber array for backward compatibility
     const updatedDiscente = await Discente.findByIdAndUpdate(
       id,
-      { 
-        $push: { 
+      {
+        $push: {
           kitAssignments: newKitAssignment,
-          patentNumber: patentNumber 
-        }
+          patentNumber: patentNumber,
+        },
       },
       { new: true, runValidators: true }
     );
@@ -328,7 +340,7 @@ const updateDiscentePatentNumber = async (req, res) => {
     res.status(200).json({
       message: 'Kit assegnato con successo',
       discente: updatedDiscente,
-      kitAssignment: newKitAssignment
+      kitAssignment: newKitAssignment,
     });
   } catch (error) {
     console.error('Error updating discente patent number:', error);
@@ -340,20 +352,22 @@ const updateDiscentePatentNumber = async (req, res) => {
 
 const searchDiscente = async (req, res) => {
   const { searchTerm } = req.query;
-  
+
   try {
     if (!searchTerm || searchTerm.trim() === '') {
-      return res.status(400).json({ message: 'il termine di ricerca è obbligatorio' });
+      return res
+        .status(400)
+        .json({ message: 'il termine di ricerca è obbligatorio' });
     }
 
     // Search by codiceFiscale or patentNumber
     const discenti = await Discente.find({
       $or: [
         { codiceFiscale: { $regex: new RegExp(searchTerm, 'i') } },
-        { patentNumber: { $in: [searchTerm] } }
-      ]
+        { patentNumber: { $in: [searchTerm] } },
+      ],
     }).populate('userId');
-    
+
     res.status(200).json(discenti);
   } catch (error) {
     res.status(500).json({ message: 'Errore nella ricerca dei discenti' });
@@ -363,7 +377,7 @@ const searchDiscente = async (req, res) => {
 // Get kit assignments for a specific discente and course
 const getDiscenteKitAssignments = async (req, res) => {
   const { discenteId, courseId } = req.params;
-  
+
   try {
     const discente = await Discente.findById(discenteId)
       .populate('kitAssignments.courseId', 'tipologia progressiveNumber')
@@ -379,7 +393,7 @@ const getDiscenteKitAssignments = async (req, res) => {
     // Filter by course if courseId is provided
     if (courseId) {
       kitAssignments = kitAssignments.filter(
-        assignment => assignment.courseId.toString() === courseId
+        (assignment) => assignment.courseId.toString() === courseId
       );
     }
 
@@ -388,20 +402,22 @@ const getDiscenteKitAssignments = async (req, res) => {
         _id: discente._id,
         nome: discente.nome,
         cognome: discente.cognome,
-        codiceFiscale: discente.codiceFiscale
+        codiceFiscale: discente.codiceFiscale,
       },
-      kitAssignments
+      kitAssignments,
     });
   } catch (error) {
     console.error('Error fetching kit assignments:', error);
-    res.status(500).json({ message: 'Errore durante il recupero delle assegnazioni kit' });
+    res
+      .status(500)
+      .json({ message: 'Errore durante il recupero delle assegnazioni kit' });
   }
 };
 
 // Remove a kit assignment from a discente
 const removeKitAssignment = async (req, res) => {
   const { discenteId, assignmentId } = req.params;
-  
+
   try {
     const discente = await Discente.findById(discenteId);
     if (!discente) {
@@ -420,73 +436,85 @@ const removeKitAssignment = async (req, res) => {
     discente.kitAssignments.pull(assignmentId);
 
     // Also remove from patentNumber array for backward compatibility
-    discente.patentNumber = discente.patentNumber.filter(num => num !== kitNumber);
+    discente.patentNumber = discente.patentNumber.filter(
+      (num) => num !== kitNumber
+    );
 
     await discente.save();
 
     res.status(200).json({
       message: 'Assegnazione kit rimossa con successo',
-      discente
+      discente,
     });
   } catch (error) {
     console.error('Error removing kit assignment:', error);
-    res.status(500).json({ message: 'Errore durante la rimozione dell\'assegnazione kit' });
+    res
+      .status(500)
+      .json({ message: "Errore durante la rimozione dell'assegnazione kit" });
   }
 };
 
 // Get all kit assignments for a course
 const getCourseKitAssignments = async (req, res) => {
   const { courseId } = req.params;
-  
+
   try {
     const discenti = await Discente.find({
-      'kitAssignments.courseId': courseId
+      'kitAssignments.courseId': courseId,
     }).populate({
       path: 'kitAssignments',
       match: { courseId: courseId },
       populate: [
         { path: 'courseId', select: 'tipologia progressiveNumber' },
         { path: 'instructorId', select: 'firstName lastName' },
-        { path: 'centerId', select: 'name firstName lastName' }
-      ]
+        { path: 'centerId', select: 'name firstName lastName' },
+      ],
     });
 
-    const assignments = discenti.map(discente => ({
-      discente: {
-        _id: discente._id,
-        nome: discente.nome,
-        cognome: discente.cognome,
-        codiceFiscale: discente.codiceFiscale
-      },
-      kitAssignments: discente.kitAssignments.filter(
-        assignment => assignment.courseId.toString() === courseId
-      )
-    })).filter(item => item.kitAssignments.length > 0);
+    const assignments = discenti
+      .map((discente) => ({
+        discente: {
+          _id: discente._id,
+          nome: discente.nome,
+          cognome: discente.cognome,
+          codiceFiscale: discente.codiceFiscale,
+        },
+        kitAssignments: discente.kitAssignments.filter(
+          (assignment) => assignment.courseId.toString() === courseId
+        ),
+      }))
+      .filter((item) => item.kitAssignments.length > 0);
 
     res.status(200).json(assignments);
   } catch (error) {
     console.error('Error fetching course kit assignments:', error);
-    res.status(500).json({ message: 'Errore durante il recupero delle assegnazioni kit del corso' });
+    res
+      .status(500)
+      .json({
+        message: 'Errore durante il recupero delle assegnazioni kit del corso',
+      });
   }
 };
 
 // Migration function to convert existing patentNumbers to kitAssignments
 const migratePatentNumbersToKitAssignments = async (req, res) => {
   try {
-    const discenti = await Discente.find({ 
+    const discenti = await Discente.find({
       patentNumber: { $exists: true, $ne: [] },
-      kitAssignments: { $size: 0 } // Only migrate if no kit assignments exist
+      kitAssignments: { $size: 0 }, // Only migrate if no kit assignments exist
     });
 
     let migratedCount = 0;
 
     for (const discente of discenti) {
       const Course = require('../models/Course');
-      
+
       // Find courses where this discente is enrolled
-      const courses = await Course.find({ 
-        discente: discente._id 
-      }).populate('tipologia').populate('userId');
+      const courses = await Course.find({
+        discente: discente._id,
+      })
+        .populate('tipologia')
+        .populate('userId');
 
       for (const patentNumber of discente.patentNumber) {
         // Find the order containing this patent number
@@ -501,13 +529,18 @@ const migratePatentNumbersToKitAssignments = async (req, res) => {
 
           if (kitItem) {
             // Try to match with a course of the same kit type
-            const matchingCourse = courses.find(course => 
-              course.tipologia._id.toString() === kitItem.productId._id.toString()
+            const matchingCourse = courses.find(
+              (course) =>
+                course.tipologia._id.toString() ===
+                kitItem.productId._id.toString()
             );
 
             if (matchingCourse) {
               const center = matchingCourse.userId;
-              const centerName = center.role === 'center' ? center.name : `${center.firstName} ${center.lastName}`;
+              const centerName =
+                center.role === 'center'
+                  ? center.name
+                  : `${center.firstName} ${center.lastName}`;
 
               const newKitAssignment = {
                 kitNumber: patentNumber,
@@ -519,7 +552,7 @@ const migratePatentNumbersToKitAssignments = async (req, res) => {
                 centerId: center._id,
                 centerName: centerName,
                 assignedDate: new Date(),
-                kitType: kitItem.productId.type
+                kitType: kitItem.productId.type,
               };
 
               discente.kitAssignments.push(newKitAssignment);
@@ -536,7 +569,7 @@ const migratePatentNumbersToKitAssignments = async (req, res) => {
 
     res.status(200).json({
       message: `Migrazione completata. ${migratedCount} discenti migrati.`,
-      migratedCount
+      migratedCount,
     });
   } catch (error) {
     console.error('Error during migration:', error);
@@ -546,20 +579,32 @@ const migratePatentNumbersToKitAssignments = async (req, res) => {
 
 const associateDiscenteWithUser = async (req, res) => {
   const { discenteId } = req.body;
-  
+
   try {
     // Find discente
     const discente = await Discente.findById(discenteId);
-    
+
     if (!discente) {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
-    
+
     // Check if discente is already associated with this user
     if (discente.userId && discente.userId.toString() === req.user.id) {
-      return res.status(400).json({ message: 'Discente già associato' });
+      return res.status(400).json({ message: 'Discente già associato a questo account' });
     }
-    
+
+    // Check if a discente with the same fiscal code already exists for this user
+    const existingDiscente = await Discente.findOne({
+      codiceFiscale: discente.codiceFiscale,
+      userId: req.user.id,
+    });
+
+    if (existingDiscente) {
+      return res.status(400).json({ 
+        message: 'Un discente con questo codice fiscale è già presente nella tua lista' 
+      });
+    }
+
     // Create a new discente associated with current user
     const newDiscente = new Discente({
       nome: discente.nome,
@@ -580,14 +625,108 @@ const associateDiscenteWithUser = async (req, res) => {
       zipCode: discente.zipCode,
       gender: discente.gender,
       companyAffiliation: discente.companyAffiliation,
-      userId: req.user.id
+      userId: req.user.id,
     });
-    
+
     await newDiscente.save();
-    
-    res.status(200).json({ message: 'Discente aggiunto alla tua lista', discente: newDiscente });
+
+    res
+      .status(200)
+      .json({
+        message: 'Discente aggiunto alla tua lista',
+        discente: newDiscente,
+      });
   } catch (error) {
+    console.error('Error associating discente:', error);
+    
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.codiceFiscale) {
+        return res.status(400).json({
+          message: 'Un discente con questo codice fiscale è già presente nella tua lista',
+        });
+      }
+    }
+    
     res.status(500).json({ message: 'Errore di associazione del discente' });
+  }
+};
+
+// Check if a discente can be assigned a kit for a specific course
+const canAssignKitToDiscente = async (req, res) => {
+  const { discenteId, courseId } = req.params;
+
+  try {
+    const discente = await Discente.findById(discenteId);
+    if (!discente) {
+      return res.status(404).json({ message: 'Discente non trovato' });
+    }
+
+    const Course = require('../models/Course');
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Corso non trovato' });
+    }
+
+    // Check if discente already has a kit for this course
+    const existingAssignment = discente.kitAssignments.find(
+      (assignment) => assignment.courseId.toString() === courseId
+    );
+
+    if (existingAssignment) {
+      return res.status(200).json({
+        canAssign: false,
+        reason: 'Il discente ha già un kit assegnato per questo corso',
+        existingKit: existingAssignment.kitNumber,
+      });
+    }
+
+    // Check course status - if it's active, allow assignment
+    if (['active', 'unactive', 'update'].includes(course.status)) {
+      return res.status(200).json({
+        canAssign: true,
+        reason: 'Il corso è attivo e il discente può ricevere un kit',
+      });
+    }
+
+    // If course is completed/ended, allow assignment only if discente doesn't have active assignments for other courses
+    if (['end', 'complete', 'finalUpdate'].includes(course.status)) {
+      // Check for active courses with kit assignments
+      const activeCourses = await Course.find({
+        discente: discenteId,
+        status: { $in: ['active', 'unactive', 'update'] },
+      });
+
+      const hasActiveKitAssignments = discente.kitAssignments.some(
+        (assignment) =>
+          activeCourses.some(
+            (activeCourse) =>
+              activeCourse._id.toString() === assignment.courseId.toString()
+          )
+      );
+
+      if (hasActiveKitAssignments) {
+        return res.status(200).json({
+          canAssign: false,
+          reason: 'Il discente ha ancora kit assegnati per corsi attivi',
+        });
+      }
+
+      return res.status(200).json({
+        canAssign: true,
+        reason: 'Il discente può ricevere un nuovo kit per questo corso',
+      });
+    }
+
+    return res.status(200).json({
+      canAssign: false,
+      reason: 'Stato del corso non valido per assegnazione kit',
+    });
+  } catch (error) {
+    console.error('Error checking kit assignment eligibility:', error);
+    res.status(500).json({
+      message: "Errore durante la verifica dell'idoneità all'assegnazione kit",
+    });
   }
 };
 
@@ -603,5 +742,6 @@ module.exports = {
   getDiscenteKitAssignments,
   removeKitAssignment,
   getCourseKitAssignments,
-  migratePatentNumbersToKitAssignments
+  migratePatentNumbersToKitAssignments,
+  canAssignKitToDiscente,
 };

@@ -11,6 +11,8 @@ exports.registerCenter = async (req, res) => {
     address,
     city,
     region,
+    provincia,
+    cap,
     email,
     phone,
     username,
@@ -48,6 +50,8 @@ exports.registerCenter = async (req, res) => {
       address,
       city,
       region,
+      provincia,
+      cap,
       email,
       phone,
       username,
@@ -88,6 +92,8 @@ exports.updateCenter = async (req, res) => {
     address,
     city,
     region,
+    provincia,
+    cap,
     email,
     phone,
     username,
@@ -108,6 +114,8 @@ exports.updateCenter = async (req, res) => {
       center.address = address || center.address;
       center.city = city || center.city;
       center.region = region || center.region;
+      center.provincia = provincia || center.provincia;
+      center.cap = cap || center.cap;
       center.email = email || center.email;
       center.phone = phone || center.phone;
       center.username = username || center.username;
@@ -120,6 +128,8 @@ exports.updateCenter = async (req, res) => {
       center.address = address || center.address;
       center.city = city || center.city;
       center.region = region || center.region;
+      center.provincia = provincia || center.provincia;
+      center.cap = cap || center.cap;
       center.email = email || center.email;
       center.phone = phone || center.phone;
     } else {
@@ -357,12 +367,12 @@ exports.removeInstructor = async (req, res) => {
 exports.getCenterInstructors = async (req, res) => {
   try {
     const centerId = req.params.centerId;
-    const center = await User.findById(centerId).populate('Instructor');
+    const center = await User.findById(centerId).populate('instructors');
     if (!center) {
       return res.status(404).json({ error: 'Centro non trovato' });
     }
 
-    res.json(center.sanitarios);
+    res.json(center.instructors);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

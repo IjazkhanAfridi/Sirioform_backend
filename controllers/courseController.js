@@ -210,19 +210,19 @@ const getCoursesByDiscenteId = async (req, res) => {
 
     let query;
     if (req.user.role === 'admin') {
-      query = { 
-        discente: { $in: [discenteId] } 
+      query = {
+        discente: { $in: [discenteId] },
       };
     } else {
-      query = { 
-        userId: req.user.id, 
-        discente: { $in: [discenteId] } 
+      query = {
+        userId: req.user.id,
+        discente: { $in: [discenteId] },
       };
     }
 
     const courses = await Course.find(query)
-    .populate('tipologia')
-    .populate('discente');
+      .populate('tipologia')
+      .populate('discente');
     console.log('courses: ', courses);
 
     res.status(200).json(courses);
@@ -421,13 +421,14 @@ const updateCourseStatus = async (req, res) => {
 
       // Check if every student has at least one kit assignment for this course
       const courseDiscenti = await Discente.find({
-        _id: { $in: course.discente }
+        _id: { $in: course.discente },
       });
 
       const allDiscentesHaveKitForCourse = courseDiscenti.every((discente) => {
         // Check if discente has a kit assignment for this specific course
-        const hasKitForThisCourse = discente.kitAssignments.some((assignment) =>
-          assignment.courseId.toString() === course._id.toString()
+        const hasKitForThisCourse = discente.kitAssignments.some(
+          (assignment) =>
+            assignment.courseId.toString() === course._id.toString()
         );
 
         // Fallback: check if discente has any patent number that matches the course kit type
@@ -1011,7 +1012,7 @@ const deleteCourseTypes = async (req, res) => {
 const downloadCertificate = async (req, res) => {
   try {
     const { courseId, discenteId } = req.params;
-    
+
     // Find the course
     const course = await Course.findById(courseId);
     if (!course) {
@@ -1019,37 +1020,40 @@ const downloadCertificate = async (req, res) => {
     }
 
     // Find the certificate for this discente
-    const certificate = course.certificates?.find(cert => 
-      cert.discenteId?.toString() === discenteId.toString()
+    const certificate = course.certificates?.find(
+      (cert) => cert.discenteId?.toString() === discenteId.toString()
     );
 
     if (!certificate) {
-      return res.status(404).json({ 
-        message: 'Certificato non trovato per questo discente' 
+      return res.status(404).json({
+        message: 'Certificato non trovato per questo discente',
       });
     }
 
     // Build the file path
     const filePath = path.join(__dirname, '..', certificate.certificatePath);
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ 
-        message: 'File del certificato non trovato sul server' 
+      return res.status(404).json({
+        message: 'File del certificato non trovato sul server',
       });
     }
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="certificate-${discenteId}.pdf"`);
-    
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="certificate-${discenteId}.pdf"`
+    );
+
     // Send the file
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error downloading certificate:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Errore durante il download del certificato',
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -1058,7 +1062,7 @@ const downloadCertificate = async (req, res) => {
 const downloadAllCertificates = async (req, res) => {
   try {
     const { courseId } = req.params;
-    
+
     // Find the course
     const course = await Course.findById(courseId).populate('discente');
     if (!course) {
@@ -1066,22 +1070,29 @@ const downloadAllCertificates = async (req, res) => {
     }
 
     if (!course.certificates || course.certificates.length === 0) {
-      return res.status(404).json({ message: 'Nessun certificato trovato per questo corso' });
+      return res
+        .status(404)
+        .json({ message: 'Nessun certificato trovato per questo corso' });
     }
 
     // Set headers for ZIP download
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="certificati-corso-${course.progressiveNumber}.zip"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="certificati-corso-${course.progressiveNumber}.zip"`
+    );
 
     // Create ZIP archive
     const archive = archiver('zip', {
-      zlib: { level: 9 } // Compression level
+      zlib: { level: 9 }, // Compression level
     });
 
     // Handle archive errors
     archive.on('error', (err) => {
       console.error('Archive error:', err);
-      res.status(500).json({ message: 'Errore durante la creazione del file ZIP' });
+      res
+        .status(500)
+        .json({ message: 'Errore durante la creazione del file ZIP' });
     });
 
     // Pipe archive to response
@@ -1090,17 +1101,17 @@ const downloadAllCertificates = async (req, res) => {
     // Add each certificate to the archive
     for (const certificate of course.certificates) {
       const filePath = path.join(__dirname, '..', certificate.certificatePath);
-      
+
       if (fs.existsSync(filePath)) {
         // Find the discente name for better filename
-        const discente = course.discente.find(d => 
-          d._id.toString() === certificate.discenteId.toString()
+        const discente = course.discente.find(
+          (d) => d._id.toString() === certificate.discenteId.toString()
         );
-        
-        const fileName = discente 
+
+        const fileName = discente
           ? `${discente.nome}_${discente.cognome}_certificato.pdf`
           : `certificato_${certificate.discenteId}.pdf`;
-        
+
         archive.file(filePath, { name: fileName });
       }
     }
@@ -1109,9 +1120,9 @@ const downloadAllCertificates = async (req, res) => {
     archive.finalize();
   } catch (error) {
     console.error('Error downloading all certificates:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Errore durante il download dei certificati',
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -1137,6 +1148,6 @@ module.exports = {
   getCourseTypes,
   getAllDiscenteExpirationCourses,
   getDiscenteExpirations,
-downloadAllCertificates,
-downloadCertificate
+  downloadAllCertificates,
+  downloadCertificate,
 };
