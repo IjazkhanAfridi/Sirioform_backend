@@ -4,6 +4,7 @@ const {
   getAllDiscenti,
   getUserDiscenti,
   getUserDiscentiById,
+  updateDiscente,
   updateDiscentePatentNumber,
   associateDiscenteWithUser,
   searchDiscente,
@@ -24,7 +25,11 @@ router.post('/', auth, createDiscente);
 router.get('/', auth, getUserDiscenti);
 router.get('/all', auth, isAdmin, getAllDiscenti);
 router.get('/:id', auth, getUserDiscentiById);
-router.patch('/:id', auth, updateDiscentePatentNumber);
+
+// Update routes - general update and specific patent number update
+router.patch('/:id', auth, updateDiscente); // General update route
+router.patch('/:id/patent', auth, updateDiscentePatentNumber); // Specific patent update
+
 router.get('/search/term', auth, searchDiscente);
 router.post('/associate', auth, associateDiscenteWithUser);
 

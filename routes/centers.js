@@ -64,7 +64,6 @@ router.get('/:id/instructors', getAssignedInstructors);
 // Route per ottenere gli istruttori del centro loggato (richiede autenticazione)
 router.get('/:centerId/instructors', auth, getCenterInstructors);
 
-router.delete('/:centerId', auth, isAdmin,deleteCenter);
-
+router.delete('/:centerId', auth, isAdmin, deleteCenter);
 
 module.exports = router;

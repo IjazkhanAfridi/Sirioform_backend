@@ -141,29 +141,88 @@ const updateDiscente = async (req, res) => {
   const updateFields = req.body;
 
   try {
+    // Check if discente exists
+    const existingDiscente = await Discente.findById(id);
+    if (!existingDiscente) {
+      return res.status(404).json({ message: 'Discente non trovato' });
+    }
+
+    // If user is not admin, check if they own this discente
+    if (
+      req.user.role !== 'admin' &&
+      existingDiscente.userId.toString() !== req.user.id
+    ) {
+      return res
+        .status(403)
+        .json({ message: 'Non autorizzato ad aggiornare questo discente' });
+    }
+
+    // Check for duplicate codiceFiscale if it's being updated
+    if (
+      updateFields.codiceFiscale &&
+      updateFields.codiceFiscale !== existingDiscente.codiceFiscale
+    ) {
+      const duplicateDiscente = await Discente.findOne({
+        codiceFiscale: updateFields.codiceFiscale,
+        _id: { $ne: id },
+      });
+
+      if (duplicateDiscente) {
+        return res.status(400).json({
+          message: 'Codice fiscale già esistente per un altro discente',
+        });
+      }
+    }
+
+    // Clean up empty values
     const cleanedFields = {};
     Object.keys(updateFields).forEach((key) => {
-      if (updateFields[key] !== null && updateFields[key] !== '') {
+      if (
+        updateFields[key] !== null &&
+        updateFields[key] !== undefined &&
+        updateFields[key] !== ''
+      ) {
         cleanedFields[key] = updateFields[key];
       }
     });
 
+    // Update the discente
     const updatedDiscente = await Discente.findByIdAndUpdate(
       id,
-      { $set: updateFields },
+      { $set: cleanedFields },
       { new: true, runValidators: true }
-    );
+    ).populate('userId', '-password');
 
-    if (!updatedDiscente) {
-      return res.status(404).json({ message: 'Discente non trovato' });
-    }
-
-    res.status(200).json(updatedDiscente);
+    res.status(200).json({
+      message: 'Discente aggiornato con successo',
+      discente: updatedDiscente,
+    });
   } catch (error) {
     console.error("Errore durante l'aggiornamento del discente:", error);
-    res
-      .status(500)
-      .json({ message: 'Errore durante aggiornamento del discente' });
+
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(
+        (err) => err.message
+      );
+      return res.status(400).json({
+        message: 'Errori di validazione',
+        errors: validationErrors,
+      });
+    }
+
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.codiceFiscale) {
+        return res.status(400).json({
+          message: 'Codice fiscale già presente',
+        });
+      }
+    }
+
+    res.status(500).json({
+      message: 'Errore durante aggiornamento del discente',
+    });
   }
 };
 
@@ -488,11 +547,9 @@ const getCourseKitAssignments = async (req, res) => {
     res.status(200).json(assignments);
   } catch (error) {
     console.error('Error fetching course kit assignments:', error);
-    res
-      .status(500)
-      .json({
-        message: 'Errore durante il recupero delle assegnazioni kit del corso',
-      });
+    res.status(500).json({
+      message: 'Errore durante il recupero delle assegnazioni kit del corso',
+    });
   }
 };
 
@@ -590,7 +647,9 @@ const associateDiscenteWithUser = async (req, res) => {
 
     // Check if discente is already associated with this user
     if (discente.userId && discente.userId.toString() === req.user.id) {
-      return res.status(400).json({ message: 'Discente già associato a questo account' });
+      return res
+        .status(400)
+        .json({ message: 'Discente già associato a questo account' });
     }
 
     // Check if a discente with the same fiscal code already exists for this user
@@ -600,8 +659,9 @@ const associateDiscenteWithUser = async (req, res) => {
     });
 
     if (existingDiscente) {
-      return res.status(400).json({ 
-        message: 'Un discente con questo codice fiscale è già presente nella tua lista' 
+      return res.status(400).json({
+        message:
+          'Un discente con questo codice fiscale è già presente nella tua lista',
       });
     }
 
@@ -630,24 +690,23 @@ const associateDiscenteWithUser = async (req, res) => {
 
     await newDiscente.save();
 
-    res
-      .status(200)
-      .json({
-        message: 'Discente aggiunto alla tua lista',
-        discente: newDiscente,
-      });
+    res.status(200).json({
+      message: 'Discente aggiunto alla tua lista',
+      discente: newDiscente,
+    });
   } catch (error) {
     console.error('Error associating discente:', error);
-    
+
     // Handle MongoDB duplicate key error
     if (error.code === 11000) {
       if (error.keyPattern && error.keyPattern.codiceFiscale) {
         return res.status(400).json({
-          message: 'Un discente con questo codice fiscale è già presente nella tua lista',
+          message:
+            'Un discente con questo codice fiscale è già presente nella tua lista',
         });
       }
     }
-    
+
     res.status(500).json({ message: 'Errore di associazione del discente' });
   }
 };
