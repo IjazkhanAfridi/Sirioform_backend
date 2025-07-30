@@ -26,8 +26,7 @@ router.get('/', auth, getUserDiscenti);
 router.get('/all', auth, isAdmin, getAllDiscenti);
 router.get('/:id', auth, getUserDiscentiById);
 
-// Update routes - general update and specific patent number update
-router.patch('/:id', auth, updateDiscente); // General update route
+router.patch('/:id', auth, updateDiscente); 
 router.patch('/:id/patent', auth, updateDiscentePatentNumber); // Specific patent update
 
 router.get('/search/term', auth, searchDiscente);

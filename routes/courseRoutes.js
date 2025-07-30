@@ -20,7 +20,8 @@ const {
   deleteCourseTypes,
   getAllDiscenteExpirationCourses,
   getDiscenteExpirations,
-  downloadCertificate, downloadAllCertificates 
+  downloadCertificate,
+  downloadAllCertificates,
 } = require('../controllers/courseController');
 const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
@@ -37,7 +38,12 @@ router.get('/user-courses', auth, getCoursesByUser);
 router.get('/user-courses/:id', auth, getCourseById);
 router.get('/discente-courses/:id', auth, getCoursesByDiscenteId);
 router.get('/user-course/:id', auth, getSingleCourseById);
-router.get('/all-discente-expirations', auth, isAdmin, getAllDiscenteExpirationCourses);
+router.get(
+  '/all-discente-expirations',
+  auth,
+  isAdmin,
+  getAllDiscenteExpirationCourses
+);
 router.get('/my-discente-expirations', auth, getDiscenteExpirations);
 
 router.get('/', auth, isAdmin, getAllCourses);
@@ -67,7 +73,15 @@ router.post('/courses/course-type', auth, courseType);
 router.delete('/courses/course-type/:id', auth, deleteCourseTypes);
 router.get('/courses/course-type', getCourseTypes);
 
-router.get('/courses/:courseId/certificate/:discenteId', auth, downloadCertificate);
-router.get('/courses/:courseId/certificates/download-all', auth, downloadAllCertificates);
+router.get(
+  '/courses/:courseId/certificate/:discenteId',
+  auth,
+  downloadCertificate
+);
+router.get(
+  '/courses/:courseId/certificates/download-all',
+  auth,
+  downloadAllCertificates
+);
 
 module.exports = router;
