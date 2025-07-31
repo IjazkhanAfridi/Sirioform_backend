@@ -1,7 +1,7 @@
 // Test script to verify discente update functionality
 const axios = require('axios');
 
-const BASE_URL = 'http://172.232.209.245/api';
+const BASE_URL = 'http://localhost:5000/api';
 
 async function testDiscenteUpdate() {
   try {

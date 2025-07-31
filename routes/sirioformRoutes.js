@@ -5,8 +5,8 @@ const router = express.Router();
 
 
 
-router.patch('/update-sirioform', updateSirioform);
-router.post('/register-sirioform', registerSirioform);
+router.patch('/update-trainer', updateSirioform);
+router.post('/register-trainer', registerSirioform);
 router.get('/', getAllSirioform);
 
 module.exports = router;

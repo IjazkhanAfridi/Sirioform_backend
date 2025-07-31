@@ -1,4 +1,8 @@
+const bcrypt = require('bcryptjs');
+const sendEmail = require('../utils/emailService');
+const axios = require('axios');
 const User = require('../models/User');
+const { createNotification } = require('../utils/notificationService');
 
 exports.registerSirioform = async (req, res) => {
   const {
@@ -43,7 +47,7 @@ exports.registerSirioform = async (req, res) => {
       username,
       password: hashedPassword,
       isActive: false,
-      role: 'sirioform',
+      role: 'trainer',
       sanitarios: [],
       instructors: [], 
     });
@@ -53,12 +57,12 @@ exports.registerSirioform = async (req, res) => {
     // Invia email di conferma
     sendEmail(
       email,
-      'Registrazione sirioform',
+      'Registrazione trainer',
       'Grazie per esserti registrato! Il tuo account è in attesa di approvazione.'
     );
 
     await createNotification({
-      message: `il sirioform ${name} si è registrato. in attesa di approvazione`,
+      message: `il trainer ${name} si è registrato. in attesa di approvazione`,
       senderId: null,
       category: 'centerAccount',
       userName: newCenter.name,
@@ -91,8 +95,8 @@ exports.updateSirioform = async (req, res) => {
 
   try {
     let center = await User.findById(centerId);
-    if (!center || center.role !== 'sirioform') {
-      return res.status(404).json({ error: 'sirioform non trovato.' });
+    if (!center || center.role !== 'trainer') {
+      return res.status(404).json({ error: 'trainer non trovato.' });
     }
     if (req.user.role === 'admin') {
       center.name = name || center.name;
@@ -109,7 +113,7 @@ exports.updateSirioform = async (req, res) => {
       center.role = role || center.role;
       center.sanitarios = sanitarios || center.sanitarios;
       center.instructors = instructors || center.instructors;
-    } else if (req.user.role === 'sirioform') {
+    } else if (req.user.role === 'trainer') {
       center.piva = piva || center.piva;
       center.address = address || center.address;
       center.city = city || center.city;
@@ -123,7 +127,7 @@ exports.updateSirioform = async (req, res) => {
     }
     await center.save();
 
-    res.status(200).json({ message: 'sirioform updated successfully.', center });
+    res.status(200).json({ message: 'trainer updated successfully.', center });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

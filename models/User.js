@@ -12,7 +12,7 @@ const UserSchema = new Schema({
   role: {
     type: String,
     required: true,
-    enum: ['admin', 'center', 'instructor', 'sirioform'],
+    enum: ['admin', 'center', 'instructor', 'sirioform', 'trainer'],
   },
   // Fields for all users
   email: { type: String, required: true, unique: true },

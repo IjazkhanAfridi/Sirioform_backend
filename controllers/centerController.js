@@ -158,9 +158,9 @@ exports.toggleCenterStatus = async (req, res) => {
 
   try {
     const center = await User.findById(centerId);
-    if (!center || center.role !== 'center') {
-      return res.status(404).json({ error: 'Centro non trovato' });
-    }
+    // if (!center || center.role !== 'center') {
+    //   return res.status(404).json({ error: 'Centro non trovato' });
+    // }
 
     center.isActive = isActive;
     await center.save();

@@ -185,7 +185,7 @@ updateDiscente('64f123456789abcd12345678', updateData, userToken);
 
 ```bash
 # Update discente
-curl -X PUT http://172.232.209.245/api/discenti/64f123456789abcd12345678 \
+curl -X PUT http://localhost:5000/api/discenti/64f123456789abcd12345678 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
