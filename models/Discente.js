@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 // Kit Assignment Schema for associating kit numbers with courses
 const kitAssignmentSchema = new mongoose.Schema(
   {
-    kitNumber: { type: String, required: true },
+    kitNumber: { type: String, required: false }, // Optional - will be set when manually assigning kit numbers
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
@@ -17,6 +17,8 @@ const kitAssignmentSchema = new mongoose.Schema(
     centerName: { type: String },
     assignedDate: { type: Date, default: Date.now },
     kitType: { type: String }, // Type of kit (e.g., "Basic", "Advanced", etc.)
+    courseCompletedDate: { type: Date }, // Date when the course was completed
+    expirationDate: { type: Date }, // Date when the course expires (2 years from completion for discentes)
   },
   { _id: true }
 );

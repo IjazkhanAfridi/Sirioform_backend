@@ -302,9 +302,9 @@ const updateDiscentePatentNumber = async (req, res) => {
       return res.status(404).json({ message: 'Discente non trovato' });
     }
 
-    // Check if this discente already has a kit assigned for this specific course
+    // Check if this discente already has a kit number assigned for this specific course
     const existingCourseAssignment = discente.kitAssignments.find(
-      (assignment) => assignment.courseId.toString() === courseId
+      (assignment) => assignment.courseId.toString() === courseId && assignment.kitNumber && assignment.kitNumber.trim() !== ''
     );
 
     if (existingCourseAssignment) {
@@ -366,31 +366,53 @@ const updateDiscentePatentNumber = async (req, res) => {
         ? center.name
         : `${center.firstName} ${center.lastName}`;
 
-    // Create new kit assignment object
-    const newKitAssignment = {
-      kitNumber: patentNumber,
-      courseId: courseId,
-      courseName: course.tipologia?.type || 'Unknown Course',
-      courseType: course.tipologia?.type || 'Unknown Type',
-      instructorId: instructorId || null,
-      instructorName: instructorName,
-      centerId: center._id,
-      centerName: centerName,
-      assignedDate: new Date(),
-      kitType: kitType,
-    };
-
-    // Add the new kit assignment and also add to patentNumber array for backward compatibility
-    const updatedDiscente = await Discente.findByIdAndUpdate(
-      id,
-      {
-        $push: {
-          kitAssignments: newKitAssignment,
-          patentNumber: patentNumber,
-        },
-      },
-      { new: true, runValidators: true }
+    // Check if there's already a tracking assignment for this course (without kit number)
+    const existingTrackingAssignment = discente.kitAssignments.find(
+      (assignment) => assignment.courseId.toString() === courseId && (!assignment.kitNumber || assignment.kitNumber.trim() === '')
     );
+
+    let updatedDiscente;
+    let assignmentResult;
+
+    if (existingTrackingAssignment) {
+      // Update the existing tracking assignment with the kit number
+      existingTrackingAssignment.kitNumber = patentNumber;
+      existingTrackingAssignment.instructorId = instructorId || existingTrackingAssignment.instructorId;
+      existingTrackingAssignment.instructorName = instructorName || existingTrackingAssignment.instructorName;
+      
+      // Add to patentNumber array for backward compatibility
+      discente.patentNumber.push(patentNumber);
+      
+      updatedDiscente = await discente.save();
+      assignmentResult = existingTrackingAssignment;
+    } else {
+      // Create new kit assignment object
+      const newKitAssignment = {
+        kitNumber: patentNumber,
+        courseId: courseId,
+        courseName: course.tipologia?.type || 'Unknown Course',
+        courseType: course.tipologia?.type || 'Unknown Type',
+        instructorId: instructorId || null,
+        instructorName: instructorName,
+        centerId: center._id,
+        centerName: centerName,
+        assignedDate: new Date(),
+        kitType: kitType,
+      };
+
+      // Add the new kit assignment and also add to patentNumber array for backward compatibility
+      updatedDiscente = await Discente.findByIdAndUpdate(
+        id,
+        {
+          $push: {
+            kitAssignments: newKitAssignment,
+            patentNumber: patentNumber,
+          },
+        },
+        { new: true, runValidators: true }
+      );
+      assignmentResult = newKitAssignment;
+    }
 
     if (!updatedDiscente) {
       return res.status(404).json({ message: 'Discente non trovato' });
@@ -399,7 +421,7 @@ const updateDiscentePatentNumber = async (req, res) => {
     res.status(200).json({
       message: 'Kit assegnato con successo',
       discente: updatedDiscente,
-      kitAssignment: newKitAssignment,
+      kitAssignment: assignmentResult,
     });
   } catch (error) {
     console.error('Error updating discente patent number:', error);

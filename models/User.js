@@ -6,6 +6,25 @@ const QualificationSchema = new Schema({
   expirationDate: { type: Date, required: true },
 });
 
+// Instructor Course Completion Schema for tracking course completions and expiry
+const instructorCourseCompletionSchema = new Schema(
+  {
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
+    },
+    courseName: { type: String },
+    courseType: { type: String },
+    kitType: { type: String }, // Type of kit used in the course
+    centerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    centerName: { type: String },
+    completedDate: { type: Date }, // Date when the course was completed
+    expirationDate: { type: Date }, // Date when the course expires (1 year from completion for instructors)
+  },
+  { _id: true }
+);
+
 const UserSchema = new Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -39,6 +58,7 @@ const UserSchema = new Schema({
   },
   brevetNumber: { type: String },
   qualifications: [QualificationSchema],
+  courseCompletions: [instructorCourseCompletionSchema], // Track instructor course completions
   sanitarios: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sanitario' }],
   instructors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 });
