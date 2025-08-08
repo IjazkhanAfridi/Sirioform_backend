@@ -304,7 +304,10 @@ const updateDiscentePatentNumber = async (req, res) => {
 
     // Check if this discente already has a kit number assigned for this specific course
     const existingCourseAssignment = discente.kitAssignments.find(
-      (assignment) => assignment.courseId.toString() === courseId && assignment.kitNumber && assignment.kitNumber.trim() !== ''
+      (assignment) =>
+        assignment.courseId.toString() === courseId &&
+        assignment.kitNumber &&
+        assignment.kitNumber.trim() !== ''
     );
 
     if (existingCourseAssignment) {
@@ -368,7 +371,9 @@ const updateDiscentePatentNumber = async (req, res) => {
 
     // Check if there's already a tracking assignment for this course (without kit number)
     const existingTrackingAssignment = discente.kitAssignments.find(
-      (assignment) => assignment.courseId.toString() === courseId && (!assignment.kitNumber || assignment.kitNumber.trim() === '')
+      (assignment) =>
+        assignment.courseId.toString() === courseId &&
+        (!assignment.kitNumber || assignment.kitNumber.trim() === '')
     );
 
     let updatedDiscente;
@@ -377,12 +382,14 @@ const updateDiscentePatentNumber = async (req, res) => {
     if (existingTrackingAssignment) {
       // Update the existing tracking assignment with the kit number
       existingTrackingAssignment.kitNumber = patentNumber;
-      existingTrackingAssignment.instructorId = instructorId || existingTrackingAssignment.instructorId;
-      existingTrackingAssignment.instructorName = instructorName || existingTrackingAssignment.instructorName;
-      
+      existingTrackingAssignment.instructorId =
+        instructorId || existingTrackingAssignment.instructorId;
+      existingTrackingAssignment.instructorName =
+        instructorName || existingTrackingAssignment.instructorName;
+
       // Add to patentNumber array for backward compatibility
       discente.patentNumber.push(patentNumber);
-      
+
       updatedDiscente = await discente.save();
       assignmentResult = existingTrackingAssignment;
     } else {

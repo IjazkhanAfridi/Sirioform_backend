@@ -89,9 +89,21 @@ router.get(
 );
 
 // New routes for course expiration functionality
-router.get('/eligibility/discente/:discenteId/course/:courseId', auth, checkDiscenteEligibility);
-router.get('/eligibility/instructor/:instructorId/course/:courseId', auth, checkInstructorEligibility);
-router.get('/eligibility/instructor/:instructorId/kittype/:kitTypeId', auth, checkInstructorKitTypeEligibility);
+router.get(
+  '/eligibility/discente/:discenteId/course/:courseId',
+  auth,
+  checkDiscenteEligibility
+);
+router.get(
+  '/eligibility/instructor/:instructorId/course/:courseId',
+  auth,
+  checkInstructorEligibility
+);
+router.get(
+  '/eligibility/instructor/:instructorId/kittype/:kitTypeId',
+  auth,
+  checkInstructorKitTypeEligibility
+);
 router.get('/expired/:type/:userId', auth, getExpiredCourses);
 
 module.exports = router;

@@ -14,8 +14,8 @@ const canAssignDiscenteToCourse = async (discenteId, kitTypeId) => {
       path: 'kitAssignments.courseId',
       populate: {
         path: 'tipologia',
-        model: 'Kit'
-      }
+        model: 'Kit',
+      },
     });
 
     if (!discente) {
@@ -25,13 +25,13 @@ const canAssignDiscenteToCourse = async (discenteId, kitTypeId) => {
     // Get the kit type for comparison
     const Kit = require('../models/Kit');
     const kitType = await Kit.findById(kitTypeId);
-    
+
     if (!kitType) {
       return { canAssign: false, reason: 'Tipo di kit non trovato' };
     }
 
     // Find all courses with the same kit type (regardless of whether they have kit numbers assigned)
-    const coursesWithSameKit = discente.kitAssignments.filter(assignment => {
+    const coursesWithSameKit = discente.kitAssignments.filter((assignment) => {
       // Check if this assignment is for the same kit type
       if (assignment.courseId && assignment.courseId.tipologia) {
         return assignment.courseId.tipologia._id.toString() === kitTypeId;
@@ -41,11 +41,14 @@ const canAssignDiscenteToCourse = async (discenteId, kitTypeId) => {
     });
 
     if (coursesWithSameKit.length === 0) {
-      return { canAssign: true, reason: 'Nessun corso precedente con questo tipo di kit' };
+      return {
+        canAssign: true,
+        reason: 'Nessun corso precedente con questo tipo di kit',
+      };
     }
 
     // Check for active (non-completed) courses
-    const activeCourse = coursesWithSameKit.find(assignment => {
+    const activeCourse = coursesWithSameKit.find((assignment) => {
       return !assignment.courseCompletedDate; // Course is not completed yet
     });
 
@@ -55,21 +58,25 @@ const canAssignDiscenteToCourse = async (discenteId, kitTypeId) => {
         reason: `Il discente è già assegnato a un corso attivo con questo tipo di kit. Deve completare il corso esistente prima di essere assegnato a uno nuovo.`,
         courseInfo: {
           courseName: activeCourse.courseName,
-          assignedDate: activeCourse.assignedDate
-        }
+          assignedDate: activeCourse.assignedDate,
+        },
       };
     }
 
     // Check for completed courses still within expiration period
-    const completedCoursesWithSameKit = coursesWithSameKit.filter(assignment => {
-      return assignment.courseCompletedDate && assignment.expirationDate;
-    });
+    const completedCoursesWithSameKit = coursesWithSameKit.filter(
+      (assignment) => {
+        return assignment.courseCompletedDate && assignment.expirationDate;
+      }
+    );
 
     if (completedCoursesWithSameKit.length > 0) {
       const currentDate = new Date();
-      const activeExpiration = completedCoursesWithSameKit.find(assignment => {
-        return assignment.expirationDate > currentDate;
-      });
+      const activeExpiration = completedCoursesWithSameKit.find(
+        (assignment) => {
+          return assignment.expirationDate > currentDate;
+        }
+      );
 
       if (activeExpiration) {
         return {
@@ -78,17 +85,25 @@ const canAssignDiscenteToCourse = async (discenteId, kitTypeId) => {
           expirationDate: activeExpiration.expirationDate,
           courseInfo: {
             courseName: activeExpiration.courseName,
-            completedDate: activeExpiration.courseCompletedDate
-          }
+            completedDate: activeExpiration.courseCompletedDate,
+          },
         };
       }
     }
 
-    return { canAssign: true, reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti' };
-
+    return {
+      canAssign: true,
+      reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti',
+    };
   } catch (error) {
-    console.error('Error checking discente course assignment eligibility:', error);
-    return { canAssign: false, reason: 'Errore durante la verifica dell\'idoneità' };
+    console.error(
+      'Error checking discente course assignment eligibility:',
+      error
+    );
+    return {
+      canAssign: false,
+      reason: "Errore durante la verifica dell'idoneità",
+    };
   }
 };
 
@@ -104,8 +119,8 @@ const canAssignInstructorToCourse = async (instructorId, kitTypeId) => {
       path: 'courseCompletions.courseId',
       populate: {
         path: 'tipologia',
-        model: 'Kit'
-      }
+        model: 'Kit',
+      },
     });
 
     if (!instructor || instructor.role !== 'instructor') {
@@ -113,21 +128,28 @@ const canAssignInstructorToCourse = async (instructorId, kitTypeId) => {
     }
 
     // Find all completed courses with the same kit type
-    const completedCoursesWithSameKit = instructor.courseCompletions.filter(completion => {
-      return completion.courseId && 
-             completion.courseId.tipologia && 
-             completion.courseId.tipologia._id.toString() === kitTypeId &&
-             completion.completedDate && // Course was completed
-             completion.expirationDate; // Has expiration date
-    });
+    const completedCoursesWithSameKit = instructor.courseCompletions.filter(
+      (completion) => {
+        return (
+          completion.courseId &&
+          completion.courseId.tipologia &&
+          completion.courseId.tipologia._id.toString() === kitTypeId &&
+          completion.completedDate && // Course was completed
+          completion.expirationDate
+        ); // Has expiration date
+      }
+    );
 
     if (completedCoursesWithSameKit.length === 0) {
-      return { canAssign: true, reason: 'Nessun corso precedente con questo tipo di kit' };
+      return {
+        canAssign: true,
+        reason: 'Nessun corso precedente con questo tipo di kit',
+      };
     }
 
     // Check if any of the completed courses are still within the 1-year expiration period
     const currentDate = new Date();
-    const activeExpiration = completedCoursesWithSameKit.find(completion => {
+    const activeExpiration = completedCoursesWithSameKit.find((completion) => {
       return completion.expirationDate > currentDate;
     });
 
@@ -138,16 +160,24 @@ const canAssignInstructorToCourse = async (instructorId, kitTypeId) => {
         expirationDate: activeExpiration.expirationDate,
         courseInfo: {
           courseName: activeExpiration.courseName,
-          completedDate: activeExpiration.completedDate
-        }
+          completedDate: activeExpiration.completedDate,
+        },
       };
     }
 
-    return { canAssign: true, reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti' };
-
+    return {
+      canAssign: true,
+      reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti',
+    };
   } catch (error) {
-    console.error('Error checking instructor course assignment eligibility:', error);
-    return { canAssign: false, reason: 'Errore durante la verifica dell\'idoneità' };
+    console.error(
+      'Error checking instructor course assignment eligibility:',
+      error
+    );
+    return {
+      canAssign: false,
+      reason: "Errore durante la verifica dell'idoneità",
+    };
   }
 };
 
@@ -166,32 +196,41 @@ const canAssignInstructorToKitType = async (instructorId, kitTypeId) => {
     }
 
     // Find all completed courses with the same kit type
-    const completedCoursesWithSameKit = instructor.courseCompletions.filter(completion => {
-      return completion.kitType && 
-             completion.completedDate && // Course was completed
-             completion.expirationDate; // Has expiration date
-    });
+    const completedCoursesWithSameKit = instructor.courseCompletions.filter(
+      (completion) => {
+        return (
+          completion.kitType &&
+          completion.completedDate && // Course was completed
+          completion.expirationDate
+        ); // Has expiration date
+      }
+    );
 
     // For this check, we need to compare against the kit type directly since we don't have a course yet
     // We'll need to get the kit type from the kit ID
     const Kit = require('../models/Kit');
     const kitType = await Kit.findById(kitTypeId);
-    
+
     if (!kitType) {
       return { canAssign: false, reason: 'Tipo di kit non trovato' };
     }
 
-    const relevantCompletions = completedCoursesWithSameKit.filter(completion => {
-      return completion.kitType === kitType.type;
-    });
+    const relevantCompletions = completedCoursesWithSameKit.filter(
+      (completion) => {
+        return completion.kitType === kitType.type;
+      }
+    );
 
     if (relevantCompletions.length === 0) {
-      return { canAssign: true, reason: 'Nessun corso precedente con questo tipo di kit' };
+      return {
+        canAssign: true,
+        reason: 'Nessun corso precedente con questo tipo di kit',
+      };
     }
 
     // Check if any of the completed courses are still within the 1-year expiration period
     const currentDate = new Date();
-    const activeExpiration = relevantCompletions.find(completion => {
+    const activeExpiration = relevantCompletions.find((completion) => {
       return completion.expirationDate > currentDate;
     });
 
@@ -202,16 +241,24 @@ const canAssignInstructorToKitType = async (instructorId, kitTypeId) => {
         expirationDate: activeExpiration.expirationDate,
         courseInfo: {
           courseName: activeExpiration.courseName,
-          completedDate: activeExpiration.completedDate
-        }
+          completedDate: activeExpiration.completedDate,
+        },
       };
     }
 
-    return { canAssign: true, reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti' };
-
+    return {
+      canAssign: true,
+      reason: 'Tutti i corsi precedenti con questo tipo di kit sono scaduti',
+    };
   } catch (error) {
-    console.error('Error checking instructor kit type assignment eligibility:', error);
-    return { canAssign: false, reason: 'Errore durante la verifica dell\'idoneità' };
+    console.error(
+      'Error checking instructor kit type assignment eligibility:',
+      error
+    );
+    return {
+      canAssign: false,
+      reason: "Errore durante la verifica dell'idoneità",
+    };
   }
 };
 
@@ -230,28 +277,32 @@ const markDiscenteCourseCompleted = async (discenteId, courseId) => {
 
     // Find the kit assignment for this course
     const kitAssignment = discente.kitAssignments.find(
-      assignment => assignment.courseId.toString() === courseId
+      (assignment) => assignment.courseId.toString() === courseId
     );
 
     if (!kitAssignment) {
-      return { success: false, message: 'Assegnazione kit non trovata per questo corso' };
+      return {
+        success: false,
+        message: 'Assegnazione kit non trovata per questo corso',
+      };
     }
 
     // Set completion date and expiration date (2 years from completion)
     kitAssignment.courseCompletedDate = new Date();
-    kitAssignment.expirationDate = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000); // 2 years
+    kitAssignment.expirationDate = new Date(
+      Date.now() + 2 * 365 * 24 * 60 * 60 * 1000
+    ); // 2 years
 
     await discente.save();
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: 'Corso marcato come completato per il discente',
-      expirationDate: kitAssignment.expirationDate
+      expirationDate: kitAssignment.expirationDate,
     };
-
   } catch (error) {
     console.error('Error marking discente course as completed:', error);
-    return { success: false, message: 'Errore durante l\'aggiornamento' };
+    return { success: false, message: "Errore durante l'aggiornamento" };
   }
 };
 
@@ -275,13 +326,15 @@ const markInstructorCourseCompleted = async (instructorId, courseId) => {
 
     // Check if already marked as completed
     const existingCompletion = instructor.courseCompletions.find(
-      completion => completion.courseId.toString() === courseId
+      (completion) => completion.courseId.toString() === courseId
     );
 
     if (existingCompletion) {
       // Update existing completion
       existingCompletion.completedDate = new Date();
-      existingCompletion.expirationDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+      existingCompletion.expirationDate = new Date(
+        Date.now() + 365 * 24 * 60 * 60 * 1000
+      ); // 1 year
     } else {
       // Create new completion record
       const newCompletion = {
@@ -292,7 +345,7 @@ const markInstructorCourseCompleted = async (instructorId, courseId) => {
         centerId: course.userId,
         centerName: '', // Will be populated if needed
         completedDate: new Date(),
-        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
       };
 
       instructor.courseCompletions.push(newCompletion);
@@ -300,15 +353,16 @@ const markInstructorCourseCompleted = async (instructorId, courseId) => {
 
     await instructor.save();
 
-    return { 
-      success: true, 
-      message: 'Corso marcato come completato per l\'istruttore',
-      expirationDate: instructor.courseCompletions[instructor.courseCompletions.length - 1].expirationDate
+    return {
+      success: true,
+      message: "Corso marcato come completato per l'istruttore",
+      expirationDate:
+        instructor.courseCompletions[instructor.courseCompletions.length - 1]
+          .expirationDate,
     };
-
   } catch (error) {
     console.error('Error marking instructor course as completed:', error);
-    return { success: false, message: 'Errore durante l\'aggiornamento' };
+    return { success: false, message: "Errore durante l'aggiornamento" };
   }
 };
 
@@ -319,16 +373,19 @@ const markInstructorCourseCompleted = async (instructorId, courseId) => {
  */
 const getExpiredCoursesForDiscente = async (discenteId) => {
   try {
-    const discente = await Discente.findById(discenteId).populate('kitAssignments.courseId');
+    const discente = await Discente.findById(discenteId).populate(
+      'kitAssignments.courseId'
+    );
     if (!discente) {
       return [];
     }
 
     const currentDate = new Date();
-    return discente.kitAssignments.filter(assignment => {
-      return assignment.expirationDate && assignment.expirationDate <= currentDate;
+    return discente.kitAssignments.filter((assignment) => {
+      return (
+        assignment.expirationDate && assignment.expirationDate <= currentDate
+      );
     });
-
   } catch (error) {
     console.error('Error getting expired courses for discente:', error);
     return [];
@@ -342,16 +399,19 @@ const getExpiredCoursesForDiscente = async (discenteId) => {
  */
 const getExpiredCoursesForInstructor = async (instructorId) => {
   try {
-    const instructor = await User.findById(instructorId).populate('courseCompletions.courseId');
+    const instructor = await User.findById(instructorId).populate(
+      'courseCompletions.courseId'
+    );
     if (!instructor || instructor.role !== 'instructor') {
       return [];
     }
 
     const currentDate = new Date();
-    return instructor.courseCompletions.filter(completion => {
-      return completion.expirationDate && completion.expirationDate <= currentDate;
+    return instructor.courseCompletions.filter((completion) => {
+      return (
+        completion.expirationDate && completion.expirationDate <= currentDate
+      );
     });
-
   } catch (error) {
     console.error('Error getting expired courses for instructor:', error);
     return [];
@@ -365,5 +425,5 @@ module.exports = {
   markDiscenteCourseCompleted,
   markInstructorCourseCompleted,
   getExpiredCoursesForDiscente,
-  getExpiredCoursesForInstructor
+  getExpiredCoursesForInstructor,
 };

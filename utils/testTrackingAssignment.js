@@ -18,21 +18,23 @@ const connectDB = async () => {
 const testTrackingAssignment = async () => {
   try {
     await connectDB();
-    
+
     const Discente = require('../models/Discente');
-    
+
     console.log('🔍 Testing Tracking Assignment Creation...\n');
 
     // Find a sample discente
     const sampleDiscente = await Discente.findOne();
-    
+
     if (!sampleDiscente) {
       console.log('❌ No sample discente found.');
       return;
     }
 
-    console.log(`📋 Testing with discente: ${sampleDiscente.nome} ${sampleDiscente.cognome}`);
-    
+    console.log(
+      `📋 Testing with discente: ${sampleDiscente.nome} ${sampleDiscente.cognome}`
+    );
+
     // Create a test tracking assignment
     const testTrackingAssignment = {
       kitNumber: null, // No kit number - this should work now
@@ -53,20 +55,18 @@ const testTrackingAssignment = async () => {
       // Try to add the assignment
       sampleDiscente.kitAssignments.push(testTrackingAssignment);
       await sampleDiscente.save();
-      
+
       console.log('✅ Tracking assignment created successfully!');
       console.log('   Kit Number:', testTrackingAssignment.kitNumber);
       console.log('   Course Name:', testTrackingAssignment.courseName);
-      
+
       // Remove the test assignment
       sampleDiscente.kitAssignments.pop();
       await sampleDiscente.save();
       console.log('🧹 Test assignment cleaned up');
-      
     } catch (error) {
       console.error('❌ Error creating tracking assignment:', error.message);
     }
-    
   } catch (error) {
     console.error('❌ Error in test:', error);
   } finally {

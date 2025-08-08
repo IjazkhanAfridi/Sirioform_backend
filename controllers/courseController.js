@@ -460,17 +460,26 @@ const updateCourseStatus = async (req, res) => {
       course.certificates = certificates;
 
       // Mark course as completed for all discentes and instructors
-      const { markDiscenteCourseCompleted, markInstructorCourseCompleted } = require('../utils/courseExpirationService');
-      
+      const {
+        markDiscenteCourseCompleted,
+        markInstructorCourseCompleted,
+      } = require('../utils/courseExpirationService');
+
       // Mark completion for all discentes
       for (const discenteId of course.discente) {
-        await markDiscenteCourseCompleted(discenteId.toString(), course._id.toString());
+        await markDiscenteCourseCompleted(
+          discenteId.toString(),
+          course._id.toString()
+        );
       }
 
       // Mark completion for all instructors
       if (course.istruttore && course.istruttore.length > 0) {
         for (const instructorId of course.istruttore) {
-          await markInstructorCourseCompleted(instructorId.toString(), course._id.toString());
+          await markInstructorCourseCompleted(
+            instructorId.toString(),
+            course._id.toString()
+          );
         }
       }
     }
@@ -546,14 +555,19 @@ const assignDescente = async (req, res) => {
     }
 
     // Check if discente can be assigned based on course expiration rules
-    const { canAssignDiscenteToCourse } = require('../utils/courseExpirationService');
-    const eligibilityCheck = await canAssignDiscenteToCourse(discenteId, course.tipologia._id.toString());
-    
+    const {
+      canAssignDiscenteToCourse,
+    } = require('../utils/courseExpirationService');
+    const eligibilityCheck = await canAssignDiscenteToCourse(
+      discenteId,
+      course.tipologia._id.toString()
+    );
+
     if (!eligibilityCheck.canAssign) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: eligibilityCheck.reason,
         expirationDate: eligibilityCheck.expirationDate,
-        courseInfo: eligibilityCheck.courseInfo
+        courseInfo: eligibilityCheck.courseInfo,
       });
     }
 
@@ -565,7 +579,9 @@ const assignDescente = async (req, res) => {
 
     // Get center information for the kit assignment
     const center = await User.findById(course.userId);
-    const centerName = center?.name || (center ? `${center.firstName} ${center.lastName}` : 'Unknown Center');
+    const centerName =
+      center?.name ||
+      (center ? `${center.firstName} ${center.lastName}` : 'Unknown Center');
 
     // Get instructor information if available
     let instructorId = null;
@@ -573,7 +589,9 @@ const assignDescente = async (req, res) => {
     if (course.istruttore && course.istruttore.length > 0) {
       instructorId = course.istruttore[0]; // Use first instructor
       const instructor = await User.findById(instructorId);
-      instructorName = instructor ? `${instructor.firstName} ${instructor.lastName}` : '';
+      instructorName = instructor
+        ? `${instructor.firstName} ${instructor.lastName}`
+        : '';
     }
 
     // Create kit assignment record for tracking course assignment and expiration
@@ -593,7 +611,7 @@ const assignDescente = async (req, res) => {
 
     // Check if kit assignment already exists for this course
     const existingAssignment = discente.kitAssignments.find(
-      assignment => assignment.courseId.toString() === courseId
+      (assignment) => assignment.courseId.toString() === courseId
     );
 
     if (!existingAssignment) {
@@ -604,7 +622,7 @@ const assignDescente = async (req, res) => {
     // Add discente to course
     course.discente.push(discenteId);
     await course.save();
-    
+
     res
       .status(200)
       .json({ message: 'Discente assegnato con successo!', course });
@@ -630,9 +648,11 @@ const removeDiscente = async (req, res) => {
     const discente = await Discente.findById(discenteId);
     if (discente) {
       const assignmentIndex = discente.kitAssignments.findIndex(
-        assignment => assignment.courseId.toString() === courseId && !assignment.courseCompletedDate
+        (assignment) =>
+          assignment.courseId.toString() === courseId &&
+          !assignment.courseCompletedDate
       );
-      
+
       if (assignmentIndex !== -1) {
         discente.kitAssignments.splice(assignmentIndex, 1);
         await discente.save();
@@ -1227,14 +1247,19 @@ const checkDiscenteEligibility = async (req, res) => {
       return res.status(404).json({ message: 'Corso non trovato' });
     }
 
-    const { canAssignDiscenteToCourse } = require('../utils/courseExpirationService');
-    const eligibilityCheck = await canAssignDiscenteToCourse(discenteId, course.tipologia._id.toString());
-    
+    const {
+      canAssignDiscenteToCourse,
+    } = require('../utils/courseExpirationService');
+    const eligibilityCheck = await canAssignDiscenteToCourse(
+      discenteId,
+      course.tipologia._id.toString()
+    );
+
     res.status(200).json(eligibilityCheck);
   } catch (error) {
     console.error('Error checking discente eligibility:', error);
     res.status(500).json({
-      message: 'Errore durante la verifica dell\'idoneità del discente',
+      message: "Errore durante la verifica dell'idoneità del discente",
       error: error.message,
     });
   }
@@ -1250,14 +1275,19 @@ const checkInstructorEligibility = async (req, res) => {
       return res.status(404).json({ message: 'Corso non trovato' });
     }
 
-    const { canAssignInstructorToCourse } = require('../utils/courseExpirationService');
-    const eligibilityCheck = await canAssignInstructorToCourse(instructorId, course.tipologia._id.toString());
-    
+    const {
+      canAssignInstructorToCourse,
+    } = require('../utils/courseExpirationService');
+    const eligibilityCheck = await canAssignInstructorToCourse(
+      instructorId,
+      course.tipologia._id.toString()
+    );
+
     res.status(200).json(eligibilityCheck);
   } catch (error) {
     console.error('Error checking instructor eligibility:', error);
     res.status(500).json({
-      message: 'Errore durante la verifica dell\'idoneità dell\'istruttore',
+      message: "Errore durante la verifica dell'idoneità dell'istruttore",
       error: error.message,
     });
   }
@@ -1268,14 +1298,20 @@ const checkInstructorKitTypeEligibility = async (req, res) => {
   const { instructorId, kitTypeId } = req.params;
 
   try {
-    const { canAssignInstructorToKitType } = require('../utils/courseExpirationService');
-    const eligibilityCheck = await canAssignInstructorToKitType(instructorId, kitTypeId);
-    
+    const {
+      canAssignInstructorToKitType,
+    } = require('../utils/courseExpirationService');
+    const eligibilityCheck = await canAssignInstructorToKitType(
+      instructorId,
+      kitTypeId
+    );
+
     res.status(200).json(eligibilityCheck);
   } catch (error) {
     console.error('Error checking instructor kit type eligibility:', error);
     res.status(500).json({
-      message: 'Errore durante la verifica dell\'idoneità dell\'istruttore per il tipo di kit',
+      message:
+        "Errore durante la verifica dell'idoneità dell'istruttore per il tipo di kit",
       error: error.message,
     });
   }
@@ -1286,23 +1322,30 @@ const getExpiredCourses = async (req, res) => {
   const { type, userId } = req.params; // type: 'discente' or 'instructor'
 
   try {
-    const { getExpiredCoursesForDiscente, getExpiredCoursesForInstructor } = require('../utils/courseExpirationService');
-    
+    const {
+      getExpiredCoursesForDiscente,
+      getExpiredCoursesForInstructor,
+    } = require('../utils/courseExpirationService');
+
     let expiredCourses = [];
-    
+
     if (type === 'discente') {
       expiredCourses = await getExpiredCoursesForDiscente(userId);
     } else if (type === 'instructor') {
       expiredCourses = await getExpiredCoursesForInstructor(userId);
     } else {
-      return res.status(400).json({ message: 'Tipo non valido. Utilizzare "discente" o "instructor"' });
+      return res
+        .status(400)
+        .json({
+          message: 'Tipo non valido. Utilizzare "discente" o "instructor"',
+        });
     }
-    
+
     res.status(200).json({
       type,
       userId,
       expiredCourses,
-      count: expiredCourses.length
+      count: expiredCourses.length,
     });
   } catch (error) {
     console.error('Error getting expired courses:', error);
