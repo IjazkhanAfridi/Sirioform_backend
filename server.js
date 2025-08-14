@@ -5,8 +5,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const cron = require('node-cron');
-const { runExpirationReminderJob } = require('./utils/expirationReminderService');
-const maintenanceRoutes = require('./routes/maintenanceRoutes');
+// const { runExpirationReminderJob } = require('./utils/expirationReminderService');
+// const maintenanceRoutes = require('./routes/maintenanceRoutes');
 
 require('dotenv').config();
 
@@ -51,7 +51,7 @@ app.use('/api/corsi', require('./routes/courseRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/patent-updates', require('./routes/patentUpdateRoutes'));
 
-app.use('/api/maintenance', maintenanceRoutes);
+// app.use('/api/maintenance', maintenanceRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(_dirname, '../frontend/dist', 'index.html'));
