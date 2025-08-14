@@ -19,6 +19,11 @@ const kitAssignmentSchema = new mongoose.Schema(
     kitType: { type: String }, // Type of kit (e.g., "Basic", "Advanced", etc.)
     courseCompletedDate: { type: Date }, // Date when the course was completed
     expirationDate: { type: Date }, // Date when the course expires (2 years from completion for discentes)
+    remindersSent: {
+    type: Map,
+    of: Date,
+    default: {},
+  },
   },
   { _id: true }
 );
